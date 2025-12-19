@@ -5,7 +5,7 @@ import ctypes
 import math
 from typing import Generator, Literal
 
-from torchbearer.mulch import Stream
+from mulch import Stream
 from .directx import DDS
 from .directx.structs import DDS_HEADER, DDS_PIXELFORMAT, DDS_HEADER_DXT10
 

@@ -11,8 +11,9 @@ from __feature__ import true_property #type: ignore
 from loguru import logger
 
 from torchbearer.gui.config_widgets import ConfigWindow
-from torchbearer.mulch import PathPlus, byter, PassingException, yamldump, TimerLog, Dictable
-from torchbearer.mulch_qt import TexViewerWidget, UserRoles, HexViewer, HexTableView, TexViewer, qGrid, qBox, Quick
+from mulch import PathPlus, byter, PassingException, yamldump, TimerLog, Dictable
+from mulch import TexViewerWidget, UserRoles, HexViewer, HexTableView, TexViewer, qGrid, qBox
+from mulch.qt.quick import Quick
 
 from torchbearer.northlight_engine.northlight import Northlight, Reader, ReaderNLEv10
 from torchbearer.northlight_engine.configs import AppConfig, InstanceConfig
@@ -213,7 +214,7 @@ class MainTree(QtWidgets.QWidget):
 		
 		with TimerLog("MapTree - layout init"):
 			self._ru_widget = self.desc_txt
-			self.l_body = qBox(qBox((self.fltr_txt, 1), self.fltr_col, self.fltr_eql, spacing=0), self.tree_pti, d=qBox.TTB, spacing=4).setMargins(9, 9, 3, 9)
+			self.l_body = qBox(qBox((self.fltr_txt, 1), self.fltr_col, self.fltr_eql, spacing=0), self.tree_pti, d='ttb', spacing=4).setMargins(9, 9, 3, 9)
 			self.r_body = qGrid(rs=[4, 1], cs=[1, 1], spacing=6, margins=(3, 9, 9, 9)).add(self.desc_txt, 0, 0, 1, 2).add(self.desc_oth, 1, 0).add(HexTableView(self.desc_hex), 1, 1)
 			self.splitter = Quick.split(Quick.nest(self.l_body), Quick.nest(self.r_body), orientation=QtCore.Qt.Orientation.Horizontal, childrenCollapsible=False, opaqueResize=False)
 			self.setLayout(qGrid(spacing=0).setMargins().add(self.splitter))
@@ -429,11 +430,13 @@ class MainTree(QtWidgets.QWidget):
 class MainWindow(QtWidgets.QMainWindow):
 	cfg: AppConfig
 	tree: MainTree
+	vrsn: str
 	
-	def __init__(self):
+	def __init__(self, vrsn):
+		self.vrsn = vrsn
 		super().__init__()
 		self.cfg = AppConfig()
-		self.windowTitle = f"Torchbearer | v{self.cfg.vrsn}"
+		self.windowTitle = f"Torchbearer | v{self.vrsn}"
 		self.statusBar = QtWidgets.QStatusBar()
 		self.resize(1366, 768)
 
@@ -451,8 +454,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		menu_about.addAction('About QT', QtWidgets.QApplication.aboutQt)
 		
 		self.confwindow = ConfigWindow(self.cfg)
-		self.confwindow.watcher.load_css()
-		self.confwindow.instance_manager.cfgChanged.connect(self.tree.load_instances)
+		#self.confwindow.instance_manager.cfgChanged.connect(self.tree.load_instances)
 	
 	@QtCore.Slot()
 	def conf(self):
@@ -462,7 +464,7 @@ class MainWindow(QtWidgets.QMainWindow):
 	def about(self):
 		md_txt = QtWidgets.QTextEdit(markdown=Path('./readme.md').read_text(), readOnly=True)
 		md_txt.setFrameStyle(QtWidgets.QFrame.Shape.NoFrame)
-		md_txt.windowTitle = f"About Torchbearer v{self.cfg.vrsn}"
+		md_txt.windowTitle = f"About Torchbearer v{self.vrsn}"
 		md_txt.resize(600, 400)
 		md_txt.show()
 
@@ -476,12 +478,10 @@ class MainWindow(QtWidgets.QMainWindow):
 # self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.WindowStaysOnTopHint)
 # Further reading: https://doc.qt.io/qtforpython-6/PySide6/QtCore/Qt.html#PySide6.QtCore.Qt.WindowType
 
-
-def default():
+def mainApp(vrsn):
 	with TimerLog('Program init'):
 		app = QtWidgets.QApplication(sys.argv)
 		app.windowIcon = QtGui.QIcon('./torchbearer/style/tbr.svg')
-		window = MainWindow()
+		window = MainWindow(vrsn)
 		window.show()
-	sys.exit(app.exec())
-	
+	return app

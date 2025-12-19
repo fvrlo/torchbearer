@@ -6,7 +6,7 @@ from enum import IntEnum
 from PySide6 import QtCore, QtGui, QtWidgets
 from __feature__ import true_property #type: ignore
 
-from torchbearer.mulch import asciichart
+from mulch import asciichart
 from .custom_roles import UserRoles
 
 

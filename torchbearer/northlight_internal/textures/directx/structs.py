@@ -6,7 +6,7 @@ from functools import cached_property
 from typing import Literal
 
 
-from torchbearer.mulch import Stream
+from mulch import Stream
 from . import D3D10
 from . import DDS
 from . import DXGI

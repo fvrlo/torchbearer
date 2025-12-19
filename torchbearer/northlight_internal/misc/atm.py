@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pyglm.glm import vec3
 
-from torchbearer.mulch import Stream
+from mulch import Stream
 
 
 class ATMFile:

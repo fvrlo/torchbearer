@@ -17,7 +17,7 @@ QBoxLayout#PropBox {
     color: black;
 }
 
-ScaledLabel {
+AspectRatioLabel {
     background-color: #f0f0f0;
 }
 

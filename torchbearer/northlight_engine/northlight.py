@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 from loguru import logger
 
-from torchbearer.mulch import byter, Helper, Stream, CloseStrCache, TimerLog
+from mulch import byter, Helper, Stream, CloseStrCache, TimerLog
 
 from .configs import InstanceConfig
 

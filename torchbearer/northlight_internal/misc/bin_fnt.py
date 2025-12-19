@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from PIL import Image
 
-from torchbearer.mulch import Stream, OLen
+from mulch import Stream, OLen
 
 # This is a refactor of NorthlightTools' binfnt implementation combined with eprilx/NorthlightFontMaker and AWTools functions.
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from zlib import crc32
 from loguru import logger
 
-from torchbearer.mulch import Stream
+from mulch import Stream
 from .cid_base import Datastream, DSC, FileMetadataEntry_v1, FileMetadataEntry_v2, ResourceID_content_v1, ResourceID_v1
 from .types_general import RID
 

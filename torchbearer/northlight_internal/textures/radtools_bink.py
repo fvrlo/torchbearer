@@ -1,6 +1,6 @@
 import enum
 
-from torchbearer.mulch import StreamObject, StreamFields
+from mulch import StreamObject, StreamFields
 
 """
 Sources:

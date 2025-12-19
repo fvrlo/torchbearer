@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from torchbearer.mulch import Stream
+from mulch import Stream
 
 
 def binhkx2dict(binhkxfile: Path):

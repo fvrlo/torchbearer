@@ -8,7 +8,7 @@ from typing import ClassVar, final, Self
 
 from loguru import logger
 
-from torchbearer.mulch import Stream, ByteStreamField, StreamFields, StreamObject
+from mulch import Stream, ByteStreamField, StreamFields, StreamObject
 
 from .types_general import BoundBox, RID
 

@@ -6,7 +6,7 @@ from enum import IntFlag
 
 from loguru import logger
 
-from torchbearer.mulch import Stream
+from mulch import Stream
 from torchbearer.northlight_internal.types_general import GID
 
 

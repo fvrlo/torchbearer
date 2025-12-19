@@ -1,4 +1,3 @@
-cach = "./cache"
-conf = "./config"
-expo = "./export"
-vrsn = "0.1rc1"
+cach = "D:/torchbearer_work/cache"
+conf = "D:/torchbearer_work/config"
+expo = "D:/torchbearer_work/export"

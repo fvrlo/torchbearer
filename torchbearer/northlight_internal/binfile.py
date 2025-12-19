@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, ClassVar
 
-from torchbearer.mulch import Stream, OutOfBoundsException, yamldump, find_start_of_nts_array
+from mulch import Stream, OutOfBoundsException, yamldump, find_start_of_nts_array
 from .cid_base import Datastream, DSC, RMDL_DSC
 from .obrs import ObjectBinaryReadStream_v1, UnknownObjectOBRS
 from .types_general import RID

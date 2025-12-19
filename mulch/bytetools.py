@@ -27,7 +27,7 @@ __all__ = [
 	"ByteStreamField"
 ]
 
-from torchbearer.mulch import Dictable
+from mulch import Dictable
 
 type EndianLiteral = Literal['little', 'big']
 

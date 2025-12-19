@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pyglm.glm import vec2, vec3, mat3
 
-from torchbearer.mulch import StreamFields, StreamObject, ByteStreamField
+from mulch import StreamFields, StreamObject, ByteStreamField
 from .types_general import GID, ObjectID, RID, BoundBox, GLMFields
 from .dpfile import BinFileDP
 

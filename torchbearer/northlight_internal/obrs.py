@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from loguru import logger
 
-from torchbearer.mulch import Stream
+from mulch import Stream
 from .dpfile import BinFileDP
 from .types_general import BoundBox, RID
 from .obrs_objects import AmbientLight_v2, AmbientLightInstance, Ammo_v4, AmmoItem_v3, Animation_v17, Animation_v19, AnimationAtTimeHandler_v1, AnimationParameters, \

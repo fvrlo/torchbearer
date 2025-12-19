@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import inspect
-import tomllib
-
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
+
+from mulch.toml import ConfigTOML, field
 
 if TYPE_CHECKING:
 	from torchbearer.northlight_engine.northlight import Northlight
@@ -17,85 +16,19 @@ __all__ = [
 ]
 
 
-class FieldTOML[T]:
-	fieldtype: type[T]
-	
-	def __init__(self, fieldtype: type[T], /, *, to_str: Callable[[T], str]):
-		self.fieldtype = fieldtype
-		self.to_str = to_str
-	
-	def __set_name__(self, obj: ConfigTOML, name: str):
-		self.name = f'_tomlfield_{name}'
-	
-	def __get__(self, obj: ConfigTOML, objtype: type = None) -> T:
-		return self.from_str(getattr(obj, self.name))
-	
-	def __set__(self, obj: ConfigTOML, value):
-		setattr(obj, self.name, value)
-		obj.save()
-	
-	def from_str(self, value: str) -> T:
-		if self.fieldtype != str:
-			return self.fieldtype(value)
-		else:
-			return value
-
-def field[T](fieldtype: type[T] = str, /, *, to_str: Callable[[T], str] = lambda x: f"\"{x}\"") -> FieldTOML[T]:
-	return FieldTOML(fieldtype, to_str=to_str)
-	
-
-
-
-class ConfigTOML:
-	__tomlpath__: Path
-	
-	@classmethod
-	def __fields__(cls) -> dict[str, FieldTOML]:
-		return {k: v for k, v in inspect.getmembers(cls) if isinstance(v, FieldTOML)}
-	
-	@classmethod
-	def writetoml(cls, path: Path, /, **kwargs) -> Path:
-		path.write_text('\n'.join([f"{name} = {_field.to_str(kwargs[name])}" for name, _field in cls.__fields__().items()]))
-		return path
-	
-	def __init__(self, tomlpath: Path, /):
-		self.__tomlpath__ = tomlpath
-		self.load()
-	
-	def save(self):
-		self.writetoml(self.__tomlpath__, **{name: getattr(self, name) for name in self.__fields__().keys()})
-	
-	def load(self):
-		if self.__tomlpath__.suffix != '.toml':
-			raise ValueError(f'Only .toml files are supported, got {self.__tomlpath__.suffix}')
-		elif not self.__tomlpath__.exists():
-			raise FileNotFoundError(self.__tomlpath__)
-		valid_fields = self.__fields__()
-		for k, v in tomllib.loads(self.__tomlpath__.read_text()).items():
-			if k in valid_fields.keys():
-				setattr(self, valid_fields[k].name, valid_fields[k].from_str(v))
-	
-	@property
-	def tomlpath(self):
-		return self.__tomlpath__
-
-
-
-
-
-
-
 class AppConfig(ConfigTOML):
 	cach: Path  = field(Path, to_str=lambda x: f"\"{str(x.absolute()).replace('\\', '/')}\"")
 	conf: Path  = field(Path, to_str=lambda x: f"\"{str(x.absolute()).replace('\\', '/')}\"")
 	expo: Path  = field(Path, to_str=lambda x: f"\"{str(x.absolute()).replace('\\', '/')}\"")
-	vrsn: str   = field(str)
 	
 	instances: dict[str, InstanceConfig]
 	
 	def __init__(self):
 		self.instances = dict()
-		super().__init__(Path.cwd() / 'config.toml')
+		cfgpath = Path.cwd() / 'config.toml'
+		if not cfgpath.is_file():
+			ConfigTOML.writetoml(cfgpath, cach="./cache", conf="./config", expo="./export")
+		super().__init__(cfgpath)
 		for k in self.conf.glob('*.toml'):
 			InstanceConfig(self, k)
 	
@@ -105,7 +38,7 @@ class AppConfig(ConfigTOML):
 			InstanceConfig(self, k)
 	
 	def new_instance_config(self, *, key: str, name: str, folder: str, dir_s: Path, dir_e: Path, version: str = 'latest'):
-		if (self.conf / f"{key}.toml").is_file():
+		if (self.conf / f"{key.lower()}.toml").is_file():
 			raise FileExistsError
 		theoretical_s = dir_s / folder
 		theoretical_e = dir_e / folder
@@ -147,7 +80,7 @@ class InstanceConfig(ConfigTOML):
 	
 	@classmethod
 	def new(cls, app: AppConfig, *, key: str, name: str, version: str, path: Path):
-		return InstanceConfig(app, InstanceConfig.writetoml(app.conf / f"{key}.toml", key=key, name=name, version=version, path=path))
+		return InstanceConfig(app, InstanceConfig.writetoml(app.conf / f"{key.lower()}.toml", key=key, name=name, version=version, path=path))
 	
 	def __init__(self, app: AppConfig, tomlpath: Path):
 		super().__init__(tomlpath)
@@ -155,7 +88,6 @@ class InstanceConfig(ConfigTOML):
 		self.admindict = dict()
 		self.app.instances[tomlpath.stem] = self
 
-	
 	@cached_property
 	def files(self) -> list[Path]:
 		return [z for z in self.path.rglob("**/*.*") if z.is_file()]

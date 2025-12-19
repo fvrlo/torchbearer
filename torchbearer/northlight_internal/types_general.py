@@ -5,7 +5,7 @@ from typing import overload
 
 from pyglm.glm import vec2, vec3, mat3, normalize, distance
 
-from torchbearer.mulch import Stream, ByteStreamField
+from mulch import Stream, ByteStreamField
 
 __all__ = [
 	"ObjectID",
