@@ -77,6 +77,13 @@ Here's some other useful tools/projects for anyone interested in Northlight engi
 - [eprilx/NorthlightFontMaker](https://github.com/eprilx/NorthlightFontMaker)
 - [riverence/io_scene_binfbx](https://github.com/riverence/io_scene_binfbx)
 
+# License
+
+This project is licensed under the GPL-3.0 license.
+
+This project is not sponsored by or related to Remedy Entertainment or others.
+
+Source code and all software referenced belongs to their developers.
 
 #
 
