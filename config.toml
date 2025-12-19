@@ -1,0 +1,4 @@
+cach = "./cache"
+conf = "./config"
+expo = "./export"
+vrsn = "0.1rc1"

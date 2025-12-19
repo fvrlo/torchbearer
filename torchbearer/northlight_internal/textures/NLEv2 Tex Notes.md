@@ -1,0 +1,198 @@
+https://wiki.multimedia.cx/index.php/Bink_Container
+
+| BINK  | base  | stream |
+|-------|-------|--------|
+| 16    | 346   | 336    |
+| 21    | 35    | 11     |
+
+| TEX	| base | stream |
+|-------|------|--------|
+| BIK   | 0    | 1      |
+| KB2   | 381  | 346    |
+
+
+| TEX				  | base | stream | DXGI    | internalType
+|---------------------|------|--------|---------|
+| R8_UNORM            | 5    | 0      | 61      | 4
+| R16_UNORM           | 78   | 203    | 56      | 6
+| R32_FLOAT           | 1    | 1      | 41      | 9
+| R16G16_UNORM        | 125  | 3122   | 35      | 11
+| B8G8R8A8_UNORM      | 81   | 6      | 87      | 18
+| B8G8R8A8_UNORM_SRGB | 184  | 42     | 91      | 19
+| R16G16B16A16_FLOAT  | 134  | 3      | 10      | 24
+| BC1_UNORM           | 915  | 3051   | 71      | 28
+| BC1_UNORM_SRGB      | 5868 | 10323  | 72      | 29
+| BC3_UNORM           | 55   | 44     | 77      | 31
+| BC3_UNORM_SRGB      | 2247 | 1448   | 78      | 32
+| BC4_UNORM           | 2530 | 3509   | 80      | 33
+| BC5_UNORM           | 3379 | 6073   | 83      | 34
+| BC6H_UF16           | 16   | 4      | 95      | 35
+| BC7_UNORM           | 10   | 0      | 98      | 36
+| BC7_UNORM_SRGB      | 445  | 0      | 99      | 37
+
+
+
+
+
+
+
+16: "BINK something 16",
+21: "BINK something 21",
+4:  "R8_UNORM",             # 61
+6:  "R16_UNORM",            # 56
+9:  "R32_FLOAT",            # 41
+11: "R16G16_UNORM",         # 35
+18: "B8G8R8A8_UNORM",       # 87
+19: "B8G8R8A8_UNORM_SRGB",  # 91
+24: "R16G16B16A16_FLOAT",   # 10
+28: "BC1_UNORM",            # 71
+29: "BC1_UNORM_SRGB",       # 72
+31: "BC3_UNORM",            # 77
+32: "BC3_UNORM_SRGB",       # 78
+33: "BC4_UNORM",            # 80
+34: "BC5_UNORM",            # 83
+35: "BC6H_UF16",            # 95
+36: "BC7_UNORM",            # 98
+37: "BC7_UNORM_SRGB"        # 99
+
+
+R32G32B32A32F
+R32G32B32A32U
+R16G16B16A16F
+R16G16B16A16
+R32G32B32F
+R32G32F
+R8G8B8A8
+R8G8B8A8_SRGB
+B8G8R8A8
+B8G8R8X8
+B8G8R8A8_SRGB
+R16G16
+R16G16F
+R16G16U
+D24S8
+R24X8
+R32F
+R32U
+B5G5R5A1
+R11G11B10F
+R16F
+R16U
+BC1
+BC1_SRGB
+BC2
+BC3
+BC3_SRGB
+BC4
+BC5
+BC6
+BC7
+BC7_SRGB
+
+
+
+
+
+D3DFMT_DXT3
+D3DFMT_DXT5
+???
+D3DFMT_DXT1
+D3DFMT_A8
+D3DFMT_R16F
+D3DFMT_INDEX16
+D3DFMT_D16
+D3DFMT_L6V5U5
+D3DFMT_V8U8
+D3DFMT_A8L8
+D3DFMT_X4R4G4B4
+D3DFMT_A4R4G4B4
+D3DFMT_X1R5G5B5
+D3DFMT_A1R5G5B5
+D3DFMT_R32F
+D3DFMT_INDEX32
+D3DFMT_D24FS8
+D3DFMT_D24X8
+D3DFMT_D24S8
+D3DFMT_D32
+D3DFMT_A2W10V10U10
+D3DFMT_V16U16
+D3DFMT_Q8W8V8U8
+D3DFMT_X8L8V8U8
+D3DFMT_G16R16F
+D3DFMT_G16R16
+D3DFMT_A2B10G10R10
+D3DFMT_X8R8G8B8
+D3DFMT_A8R8G8B8
+D3DFMT_A16B16G16R16
+D3DFMT_A16B16G16R16F
+D3DFMT_A32B32G32R32F
+.pfm
+.hdr
+.jpg
+.png
+.tga
+.bmp
+
+
+
+
+
+
+
+
+
+
+
+
+
+A32B32G32R32F
+R16G16B16A16F
+R16G16B16A16
+R32G32B32F
+G32R32F
+R8G8B8A8
+A8R8G8B8
+X8R8G8B8
+A8R8G8B8_SRGB
+G16R16
+G16R16F
+D24S8
+R24X8
+R32F
+R32U
+A1R5G5B5
+R11G11B10
+R16F
+R16U
+DXT1
+DXT1_SRGB
+DXT3
+DXT5
+DXT5_SRGB
+BC4
+BC5
+BC6
+BC7
+BC7_SRGB
+???
+DXT1
+DXT2
+DXT3
+DXT4
+DXT5
+BC4U
+BC4S
+BC5U
+BC5S
+RGBG
+GRGB
+YUY2
+DX10
+
+
+
+
+
+
+
+

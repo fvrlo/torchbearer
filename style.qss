@@ -1,0 +1,34 @@
+QSplitter::handle {
+	background-color: grey;
+}
+
+QSplitter[orientation="1"]::handle {
+    margin-top: 8em;
+    margin-bottom: 8em;
+}
+
+QSplitter[orientation="2"]::handle {
+    margin-left: 8em;
+    margin-right: 8em;
+}
+
+QBoxLayout#PropBox {
+    background-color: black;
+    color: black;
+}
+
+ScaledLabel {
+    background-color: #f0f0f0;
+}
+
+QLabel#TexView {
+    background-color: black;
+}
+
+QTextEdit:read-only {
+	font-family: "Lucida Console";
+}
+
+QLabel#ActionLabel {
+	color: #002080;
+}
