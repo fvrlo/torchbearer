@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from mulch.toml import ConfigTOML, field
 
 if TYPE_CHECKING:
-	from torchbearer.northlight_engine.northlight import Northlight
+	from torchbearer.northlight_engine.engine import Admin
 
 
 __all__ = [
@@ -76,7 +76,7 @@ class InstanceConfig(ConfigTOML):
 	version:    str     = field()
 	
 	app: AppConfig
-	admindict: dict[Path, Northlight.Admin]
+	admindict: dict[Path, Admin]
 	
 	@classmethod
 	def new(cls, app: AppConfig, *, key: str, name: str, version: str, path: Path):

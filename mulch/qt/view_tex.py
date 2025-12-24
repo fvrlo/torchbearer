@@ -33,6 +33,8 @@ class TexViewerWidget(QtWidgets.QScrollArea):
 		self.img_lbl = QtWidgets.QLabel(scaledContents=True)
 		self.img_lbl.sizePolicy.setVerticalPolicy(QtWidgets.QSizePolicy.Policy.Ignored)
 		self.img_lbl.sizePolicy.setHorizontalPolicy(QtWidgets.QSizePolicy.Policy.Ignored)
+		self.img_lbl.minimumWidth = 200
+		self.img_lbl.minimumHeight = 200
 		
 		self.setWidget(self.img_lbl)
 		
@@ -58,12 +60,19 @@ class TexViewerWidget(QtWidgets.QScrollArea):
 	
 	@QtCore.Slot(Path)
 	def updateImage(self, file: Path):
+		logger.info(f'updateImage {file}')
+		assert file.is_file()
 		try:
-			self.img_lbl.pixmap = QtGui.QPixmap.fromImage(ImageQt.ImageQt(str(file)))
+			img: QtGui.QImage = ImageQt.ImageQt(str(file))
+			logger.info(img.size())
+			self.img_lbl.pixmap = QtGui.QPixmap.fromImage(img)
 		except NotImplementedError as err:
 			self.reset()
 			logger.error(f"Can't show image preview: {err.args[0]} ({DXGI_FORMAT(int(err.args[-1][26:])).name})")
 			return False
+		
+		if self.img_lbl.pixmap.isNull():
+			raise ValueError
 		self.empty = False
 		self.img_sca = 1.0
 		self.img_lbl.adjustSize()

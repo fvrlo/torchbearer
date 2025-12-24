@@ -3,14 +3,14 @@ from __future__ import annotations
 from torchbearer.northlight_internal.textures.nletex import NorthlightTex
 from torchbearer.northlight_internal.textures.radtools_bink import BINK_Header
 from torchbearer.northlight_internal.textures.directx.structs import DDS_FILEHEAD
-from torchbearer.northlight_engine.northlight import Northlight
+from torchbearer.northlight_engine.engine import File
 
 from mulch import Stream
 
-def tex_handler(file: Northlight.File) -> DDS_FILEHEAD | NorthlightTex | BINK_Header | None:
+def tex_handler(file: File) -> DDS_FILEHEAD | NorthlightTex | BINK_Header | None:
 	# the first chunk (if chunked) will always be size_decompressed == 148 if it's a real dds file. If it isn't, it's a bink video file in disguise
 	# older tex files may also be a custom format DDS where the header is abbreviated
-	match file.admin.reader.version:
+	match file.admin.reader().version:
 		case 'v2.0':
 			# either actual DDS or BINK file
 			# games: AW2, FBR
@@ -32,3 +32,4 @@ def tex_handler(file: Northlight.File) -> DDS_FILEHEAD | NorthlightTex | BINK_He
 			# games: AW1, AWR, AWN
 			with Stream(file.chunks[0].archive.path, spos=file.chunks[0].offset) as f:
 				return NorthlightTex(f, file.chunks[0].size)
+	return None

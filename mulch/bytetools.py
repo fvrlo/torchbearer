@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import inspect
 import struct
 import zlib
 from abc import ABC, abstractmethod
 
 from collections.abc import Generator
-from inspect import getmembers, ismethod, isfunction
 from pathlib import Path
 from typing import Any, BinaryIO, Callable, final, Literal, Optional, Protocol
 
@@ -54,12 +54,12 @@ class _StreamTempConfig:
 	blen: TTuple[int]
 	
 	def __init__(self, /, prnt: Stream, *,
-	             ofst:  Optional[int]             = None,
-	             odir:  Optional[int]             = None,
-	             endi:  Optional[EndianLiteral]   = None,
-	             sign:  Optional[bool]            = None,
-	             size:  Optional[int]             = None,
-	             blen:  Optional[int]             = None,
+	             ofst: Optional[int] = None,
+	             odir: Optional[int] = None,
+	             endi: Optional[EndianLiteral] = None,
+	             sign: Optional[bool] = None,
+	             size: Optional[int] = None,
+	             blen: Optional[int] = None,
 	             ):
 		self.prnt = prnt
 		self.ppos = prnt.tell()
@@ -98,7 +98,7 @@ class _StreamTempConfig:
 			self.prnt.blen = self.blen[0]
 		if self.ofst is not None:
 			self.prnt.seek(self.ppos)
-	
+
 class _DebugNamespace:
 	@staticmethod
 	def parse(data: int, *, decode: bool = True):
@@ -118,7 +118,7 @@ class _DebugNamespace:
 	@classmethod
 	def print(cls, data: bytes | bytearray, *, chunksize: int = 4, decode: bool = True) -> str:
 		return ' | '.join(' '.join(piece_tup) for piece_tup in cls.yielder_str(data, chunksize=chunksize, decode=decode))
-
+	
 	@classmethod
 	def print_straight(cls, data: bytes | bytearray) -> str:
 		return ' '.join(cls.parse(x) for x in data)
@@ -135,7 +135,7 @@ def find_start_of_nts_array(real_namecount: int, data: bytes) -> int:
 			# nameSize should be equal to the position of the first (last in neg_stream) word's first letter in our inverse stream
 			while True:
 				negpos = neg_stream.tell()
-				nameSize = int.from_bytes(neg_stream.peek(4), byteorder='big') # BE is just reverse LE, 5Head
+				nameSize = int.from_bytes(neg_stream.peek(4), byteorder='big')  # BE is just reverse LE, 5Head
 				if negpos == nameSize:
 					logger.info(f"Found possible namesize value of {negpos}...")
 					# begin test by going to the negative index negpos
@@ -176,7 +176,9 @@ class StreamObject[ExtraType]:
 		
 		for member_object in somdesc:
 			try:
-				member_object.setter(stream=stream, obj=self, extra=extra)
+				passed = member_object.setter(stream=stream, obj=self, extra=extra)
+				if not passed:
+					raise ValueError
 			except ValueError as e:
 				logger.error(f"Error setting {member_object.__bsf_orig__} on {type(self).__name__}")
 				raise e
@@ -186,12 +188,13 @@ class StreamObject[ExtraType]:
 		self.__so_init__ = True
 	
 	def dict(self):
-		gen = {k: getattr(self, k) for k in [name for name, x in getmembers(self.__class__) if not (ismethod(x) or isfunction(x) or name.startswith('_') or name.endswith('_'))]}
-		return {k: v.dict() if isinstance(v, Dictable) else v for k, v in gen.items()}
-
-
-
-
+		if not self.__so_init__:
+			raise AttributeError
+		attrkeys = [name for name in self.__dict__.keys() if ('_' not in name) and (name != 'dict') and (name != 'container')]
+		gen = {k: getattr(self, k) for k in [name for name in attrkeys if not (inspect.ismethod(self.__dict__[name]) or inspect.isfunction(self.__dict__[name]))]}
+		for k in self.__so_fields__():
+			gen[k.__bsf_orig__] = k.__get__(self, self.__class__)
+		return {k: (v.dict() if isinstance(v, Dictable) else v) for k, v in gen.items()}
 
 
 
@@ -204,12 +207,21 @@ class ByteStreamField[returnType, extraType](ABC):
 	def __set_name__(self, obj: StreamObject, name: str):
 		self.__bsf_orig__ = name
 		self.__bsf_name__ = f'_bsf_{name}'
-
+	
 	def __get__(self, obj: StreamObject, objtype: type[StreamObject]) -> returnType:
 		try:
 			return getattr(obj, self.__bsf_name__)
 		except AttributeError as e:
-			logger.error(f"StreamField error: tried getting {self.__bsf_orig__} but this object/caller hasn't set one yet!")
+			for i, x in enumerate(reversed(inspect.stack()[3:-2])):
+				logger.error(f"Stacktrace in {x.filename}, line {x.positions.lineno}")
+				pos_start = x.positions.col_offset - x.code_context[0][:x.positions.col_offset].count('\t')
+				pos_end = x.positions.end_col_offset - x.code_context[0][:x.positions.end_col_offset].count('\t')
+				txt_pre = x.code_context[0].replace('\t', '').replace('\n', '')
+				txt_pre = f"{txt_pre[:pos_end]}</r>{txt_pre[pos_end:]}"
+				txt_pre = f"{txt_pre[:pos_start]}<r>{txt_pre[pos_start:]}"
+				logger.opt(colors=True).error(f"    {txt_pre}")
+			logger.error(f"StreamField error: tried getting {self.__bsf_orig__} (attr name {self.__bsf_name__}) but this object/caller hasn't set one yet!")
+			logger.error(f"Arguments: obj={obj} ({type(obj)}), objtype={objtype} ({type(objtype)})")
 			logger.error(f"Is the object even a StreamObject?: {isinstance(obj, StreamObject)}")
 			logger.error(f"Real type: {obj} ({type(obj)}, caller says {objtype})")
 			logger.error(f"Initialized?: {obj.__so_init__}")
@@ -222,6 +234,7 @@ class ByteStreamField[returnType, extraType](ABC):
 			value = self.caller(stream, obj, extra)
 			setattr(obj, self.__bsf_name__, value)
 			assert value == getattr(obj, self.__bsf_name__)
+			return True
 		except OutOfBoundsException as e:
 			logger.error(f"{obj.__class__.__name__} errored when initializing field {self.__bsf_name__}")
 			logger.error(f"start: {obj.__so_pos0__}, current pos: {stream.tell()}")
@@ -231,7 +244,7 @@ class ByteStreamField[returnType, extraType](ABC):
 			logger.error(f"{obj.__class__.__name__} errored when initializing field {self.__bsf_name__}")
 			logger.error(f"field was set but getattr retrieved something else")
 			raise e
-		
+	
 	@abstractmethod
 	def caller(self, stream: Stream, obj: StreamObject, extra: extraType) -> returnType:
 		...
@@ -288,7 +301,7 @@ class StreamFields:
 			if data is None:
 				logger.error([self.size, stream.tell(), len(stream)])
 				raise ValueError(self.size)
-			return int.from_bytes(data, byteorder=endi, signed=sign) # type: ignore
+			return int.from_bytes(data, byteorder=endi, signed=sign)
 	
 	class sint(ByteStreamField[int, None]):
 		def __init__(self, size: int | None = None, /, endi: EndianLiteral | None = None):
@@ -302,7 +315,7 @@ class StreamFields:
 			if data is None:
 				logger.error([self.size, stream.tell(), len(stream)])
 				raise ValueError(self.size)
-			return int.from_bytes(data, byteorder=endi, signed=True)  # type: ignore
+			return int.from_bytes(data, byteorder=endi, signed=True)
 	
 	class uint(ByteStreamField[int, None]):
 		def __init__(self, size: int | None = None, /, endi: EndianLiteral | None = None):
@@ -326,14 +339,17 @@ class StreamFields:
 		
 		def caller(self, stream, obj, extra):
 			match self.size:
-				case 2: return stream.f2
-				case 4: return stream.f4
-				case 8: return stream.f8
-
+				case 2:
+					return stream.f2
+				case 4:
+					return stream.f4
+				case 8:
+					return stream.f8
+	
 	class bool(ByteStreamField[bool, None]):
 		def caller(self, stream, obj, extra):
 			return bool(stream)
-
+	
 	class str(ByteStreamField[str, None]):
 		size: int | None
 		
@@ -347,7 +363,7 @@ class StreamFields:
 				return stream.string(int(stream))
 			else:
 				return stream.string(self.size)
-
+	
 	class nts(ByteStreamField[str, None]):
 		"""Null terminated string"""
 		def caller(self, stream, obj, extra):
@@ -357,7 +373,7 @@ class StreamFields:
 		"""String prepended with length field"""
 		def caller(self, stream, obj, extra):
 			return stream.string(int(stream))
-
+	
 	class checkstr(ByteStreamField[str, None]):
 		valu: str
 		size: int | None
@@ -375,7 +391,7 @@ class StreamFields:
 				x = stream.string(self.size)
 			assert x == self.valu
 			return x
-
+	
 	class call[returnType](ByteStreamField[returnType, None]):
 		action: CallProto[Stream, returnType]
 		
@@ -384,7 +400,7 @@ class StreamFields:
 		
 		def caller(self, stream, obj, extra) -> returnType:
 			return self.action(stream)
-
+	
 	class callextra[returnType, extraType](ByteStreamField[returnType, extraType]):
 		action: Callable[[extraType], returnType]
 		
@@ -393,7 +409,7 @@ class StreamFields:
 		
 		def caller(self, stream, obj, extra) -> returnType:
 			return self.action(extra)
-
+	
 	class callself[returnType, selfType: StreamObject](ByteStreamField[returnType, None]):
 		action: Callable[[selfType], returnType]
 		
@@ -402,7 +418,7 @@ class StreamFields:
 		
 		def caller(self, stream, obj, extra) -> returnType:
 			return self.action(obj)
-
+	
 	class callstreamself[returnType](ByteStreamField[returnType, None]):
 		action: Callable[[Stream, StreamObject], returnType]
 		
@@ -411,7 +427,7 @@ class StreamFields:
 		
 		def caller(self, stream, obj, extra) -> returnType:
 			return self.action(stream, obj)
-
+	
 	class callstreamselfplus[returnType, extraType](ByteStreamField[returnType, extraType]):
 		action: Callable[[Stream, StreamObject, extraType], returnType]
 		
@@ -420,7 +436,7 @@ class StreamFields:
 		
 		def caller(self, stream, obj, extra) -> returnType:
 			return self.action(stream, obj, extra)
-
+	
 	class callplus[returnType, extraType](ByteStreamField[returnType, extraType]):
 		action: Callable[[Stream, extraType], returnType]
 		
@@ -429,7 +445,7 @@ class StreamFields:
 		
 		def caller(self, stream, obj, extra: extraType | None) -> returnType:
 			return self.action(stream, extra)
-
+	
 	class iter[returnType](ByteStreamField[returnType, None]):
 		action: Callable[[Stream], returnType]
 		length: int | None
@@ -444,13 +460,13 @@ class StreamFields:
 			else:
 				length = self.length
 			return [self.action(stream) for _ in range(length)]
-		
+	
 	class subitem[subType: StreamObject](ByteStreamField[subType, None]):
 		sso: type[subType]
 		
 		def __init__(self, sso: type[subType]):
 			self.sso = sso
-
+		
 		def caller(self, stream, obj, extra) -> subType:
 			return self.sso(stream)
 
@@ -539,7 +555,7 @@ class Stream:
 			sign: bool = None,
 			size: int = None,
 			blen: int = None
-			) -> _StreamTempConfig:
+	) -> _StreamTempConfig:
 		return _StreamTempConfig(self, ofst=ofst, odir=odir, endi=endi, sign=sign, size=size, blen=blen)
 	
 	def __getitem__(self, i: int | slice) -> bytes:
@@ -592,7 +608,7 @@ class Stream:
 	     - 0: absolute position (start of the stream); offset should be zero or positive
 	     - 1: relative position (current stream position); offset may be negative
 	     - 2: negative position (end of the stream); offset should be zero or negative
-		
+
 	    .. _position: https://docs.python.org/3.12/library/io.html#io.IOBase.seek
 		"""
 		match __whence:
@@ -645,7 +661,7 @@ class Stream:
 			return self.internal_io.read(__n)
 		else:
 			return b''
-		
+	
 	def read_at(self, pos: int, size: int, go_back: bool = False) -> bytes:
 		if go_back:
 			startpos = self.tell()
@@ -677,7 +693,7 @@ class Stream:
 			endi = self.endi
 		return int.from_bytes(self.read(length), byteorder=endi, signed=signed)
 	
-	def string(self, length: int, /, *, encoding ="utf-8") -> str:
+	def string(self, length: int, /, *, encoding="utf-8") -> str:
 		if length == 0:
 			return ''
 		elif length == -1:
@@ -777,7 +793,7 @@ class Stream:
 	
 	@property
 	def f8(self) -> float:
-		return struct.unpack('d',  self[8])[0]
+		return struct.unpack('d', self[8])[0]
 	
 	# <------   Booleans    ------>
 	@property

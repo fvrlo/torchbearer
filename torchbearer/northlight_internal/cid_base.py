@@ -61,7 +61,8 @@ class Datastream[CType](ABC, StreamObject):
 		key = container.typekey
 		if key in Datastream.__ds_meta_dcls__.keys():
 			with Stream(data) as stream:
-				x = Datastream.__ds_meta_dcls__[key](container, stream)
+				ds_type = Datastream.__ds_meta_dcls__[key]
+				x = ds_type(container, stream)
 				try:
 					assert len(stream) == stream.tell(), (len(stream), stream.tell(), key)
 				except AssertionError as e:

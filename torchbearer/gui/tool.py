@@ -15,7 +15,8 @@ from mulch import PathPlus, byter, PassingException, yamldump, TimerLog, Dictabl
 from mulch import TexViewerWidget, UserRoles, HexViewer, HexTableView, TexViewer, qGrid, qBox
 from mulch.qt.quick import Quick
 
-from torchbearer.northlight_engine.northlight import Northlight, Reader, ReaderNLEv10
+from torchbearer.northlight_engine.engine import Admin, TreeAdmin, MetaAdmin, DataAdmin, Folder, File
+from torchbearer.northlight_engine.readers import Reader, ReaderNLEv10
 from torchbearer.northlight_engine.configs import AppConfig, InstanceConfig
 from torchbearer.northlight_internal.textures.decider_tex import tex_handler
 from torchbearer.northlight_internal.packmeta import PackMeta
@@ -99,7 +100,7 @@ class TreePTI(QtWidgets.QTreeWidget):
 		
 	def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
 		subitem = self.ptisel()
-		if isinstance(subitem, Northlight.File):
+		if isinstance(subitem, File):
 			self.action_exportf.enabled = True
 			self.action_showexp.enabled = True
 			self.action_preview.enabled = subitem.extension in ['dds', 'tex']
@@ -108,7 +109,7 @@ class TreePTI(QtWidgets.QTreeWidget):
 			self.menu_ctx.popup(QtGui.QCursor.pos())
 			event.accept()
 			return True
-		elif isinstance(subitem, Northlight.Admin):
+		elif isinstance(subitem, Admin):
 			self.action_exportf.enabled = False
 			self.action_showexp.enabled = False
 			self.action_preview.enabled = False
@@ -142,13 +143,13 @@ class TreePTI(QtWidgets.QTreeWidget):
 		for x in list(self.nested_children(item)):
 			x.parent().removeChild(x)
 		subitem = item.data(0, UserRoles.PTI)
-		if isinstance(subitem, Northlight.Admin):
+		if isinstance(subitem, Admin):
 			subitem.clear()
 	
 	@QtCore.Slot()
 	def load_image_preview(self):
 		subitem = self.ptisel()
-		if isinstance(subitem, Northlight.File):
+		if isinstance(subitem, File):
 			if not subitem.is_exported:
 				subitem.export()
 			popup = TexViewer()
@@ -158,14 +159,14 @@ class TreePTI(QtWidgets.QTreeWidget):
 	@QtCore.Slot()
 	def export_file(self) -> None:
 		subitem = self.ptisel()
-		if isinstance(subitem, Northlight.File):
+		if isinstance(subitem, File):
 			subitem.export_path.write_bytes(subitem.data)
 			logger.info(f"File {subitem.name} exported to {subitem.export_path}")
 	
 	@QtCore.Slot()
 	def open_folder(self) -> None:
 		subitem = self.ptisel()
-		if isinstance(subitem, Northlight.File):
+		if isinstance(subitem, File):
 			if subitem.is_exported:
 				PathPlus.open_in_explorer(subitem.export_path.parent)
 
@@ -236,30 +237,30 @@ class MainTree(QtWidgets.QWidget):
 			qtwi.setIcon(0, QtGui.QIcon(f"./torchbearer/style/{item.tomlpath.stem}.svg"))
 		elif isinstance(item, Reader):
 			qtwi.setIcon(0, qta.icon('fa6s.barcode'))
-		elif isinstance(item, Northlight.Admin):
+		elif isinstance(item, Admin):
 			qtwi.setIcon(0, qta.icon('fa6s.box-archive'))
-		elif isinstance(item, Northlight.TreeAdmin):
+		elif isinstance(item, TreeAdmin):
 			qtwi.setIcon(0, qta.icon('fa6s.folder-tree'))
-		elif isinstance(item, Northlight.DataAdmin):
+		elif isinstance(item, DataAdmin):
 			qtwi.setIcon(0, qta.icon('fa6s.sitemap'))
-		elif isinstance(item, Northlight.MetaAdmin):
+		elif isinstance(item, MetaAdmin):
 			qtwi.setIcon(0, qta.icon('fa6s.square-binary'))
-		elif isinstance(item, Northlight.File):
+		elif isinstance(item, File):
 			qtwi.setIcon(0, qta.icon(extension_icons.get(item.extension, 'fa6.file')))
-		elif isinstance(item, Northlight.Folder):
+		elif isinstance(item, Folder):
 			qtwi.setIcon(0, qta.icon('fa6s.folder', color=QtGui.QColor(0xFF, 0xD9, 0x60)))
 
 		for i, key in enumerate(self.headers):
 			val = None
 			match key:
 				case 'Name':
-					if isinstance(item, (InstanceConfig, Northlight.Folder, Northlight.File, Northlight.Admin, Path)):
+					if isinstance(item, (InstanceConfig, Folder, File, Admin, Path)):
 						val = item.name if item.name != '' else '<EmptyName>'
-					elif isinstance(item, Northlight.TreeAdmin):
+					elif isinstance(item, TreeAdmin):
 						val = "Filesystem"
-					elif isinstance(item, Northlight.DataAdmin):
+					elif isinstance(item, DataAdmin):
 						val = "Archives"
-					elif isinstance(item, Northlight.MetaAdmin):
+					elif isinstance(item, MetaAdmin):
 						val = "Metadata"
 					elif isinstance(item, Reader):
 						val = "Reader"
@@ -269,7 +270,7 @@ class MainTree(QtWidgets.QWidget):
 					elif hasattr(item, "extension"):
 						val = item.extension
 				case 'File Size':
-					if isinstance(item, (InstanceConfig, Northlight.Admin, Northlight.File)):
+					if isinstance(item, (InstanceConfig, Admin, File)):
 						val = byter(len(item))
 					elif isinstance(item, Path):
 						val = byter(item.stat().st_size)
@@ -289,17 +290,19 @@ class MainTree(QtWidgets.QWidget):
 				for tli in [self.tree_pti.topLevelItem(i) for i in range(self.tree_pti.topLevelItemCount)]:
 					for item in self.tree_pti.nested_children(tli):
 						subitem = item.data(0, UserRoles.PTI)
-						if isinstance(subitem, Northlight.File):
+						if isinstance(subitem, File):
 							if self.fltr_eql.checked:
 								decision = item.text(headerdict[self.fltr_col.currentText]) != self.fltr_txt.text
 							else:
 								decision = self.fltr_txt.text not in item.text(headerdict[self.fltr_col.currentText])
-						elif isinstance(subitem, Northlight.Folder):
+						elif isinstance(subitem, Folder):
 							decision = True
 							for kid in [item.child(ci) for ci in range(item.childCount())]:
 								if not kid.isHidden():
 									decision = False
 									break
+						else:
+							continue
 						if item.isHidden() != decision:
 							item.setHidden(decision)
 	
@@ -308,23 +311,23 @@ class MainTree(QtWidgets.QWidget):
 		item = self.tree_pti.selection()
 		subitem = item.data(0, UserRoles.PTI)
 		
-		if isinstance(subitem, Northlight.File):
+		if isinstance(subitem, File):
 			if subitem.name.split('.')[-1] in ['tex', 'dds']:
 				self.ru_widget = self.desc_img
-				return
-		
-		if self.ru_widget != self.desc_txt:
-			self.ru_widget = self.desc_txt
+			elif self.ru_widget != self.desc_txt:
+					self.ru_widget = self.desc_txt
+		elif self.ru_widget != self.desc_txt:
+				self.ru_widget = self.desc_txt
 			
 		self.updateDesc_Gen(item, subitem)
 		if isinstance(self.ru_widget, QtWidgets.QTextEdit):
 			self.updateDesc_Text(subitem)
-		elif isinstance(self.ru_widget, TexViewerWidget):
+		elif self.ru_widget.__class__ == TexViewerWidget:
 			self.updateDesc_Image(subitem)
 		self.updateDesc_Other(subitem)
 
 	def updateDesc_Text(self, subitem) -> None:
-		if isinstance(subitem, Northlight.File):
+		if isinstance(subitem, File):
 			match subitem.name.split('.')[-1]:
 				case 'md':
 					self.desc_txt.markdown = subitem.data.decode()
@@ -340,35 +343,36 @@ class MainTree(QtWidgets.QWidget):
 						self.desc_txt.plainText = ''
 				case _:
 					self.desc_txt.plainText = ''
-		elif isinstance(subitem, Northlight.MetaAdmin):
+		elif isinstance(subitem, MetaAdmin):
 			if subitem.path is not None:
-				self.desc_txt.plainText = yamldump(PackMeta(subitem.path, subitem.admin.reader.version_minor).dict())
+				self.desc_txt.plainText = yamldump(PackMeta(subitem.path, subitem.admin.reader().version_minor).dict())
 			elif len(subitem.metadata_types) != 0:
 				self.desc_txt.plainText = yamldump(subitem.metadata_types)
 			else:
 				self.desc_txt.plainText = "No packmeta file associated."
-		elif isinstance(subitem, Northlight.Admin):
-			self.desc_txt.plainText = yamldump({'Extensions'   : subitem.extensions(), 'Top-Level Folders': sorted([x.name for x in subitem.tree.fldr if x.depth == 1]),
+		elif isinstance(subitem, Admin):
+			self.desc_txt.plainText = yamldump({'Extensions'   : subitem.extensions, 'Top-Level Folders': sorted([x.name for x in subitem.tree.fldr if x.depth == 1]),
 			                             'Second Level Folders': sorted({x.name for x in subitem.tree.fldr if x.depth == 2})})
 		else:
 			self.desc_txt.plainText = ''
 	
 	def updateDesc_Image(self, subitem) -> None:
-		if isinstance(subitem, Northlight.File):
+		if isinstance(subitem, File):
 			if subitem.name.split('.')[-1] in ['tex', 'dds']:
+				logger.info('update image pls')
 				if not subitem.is_exported:
 					subitem.export()
 				self.desc_img.updateImage(subitem.export_path)
 		
 	def updateDesc_Gen(self, item: QtWidgets.QTreeWidgetItem, subitem) -> None:
-		if isinstance(subitem, Northlight.Admin):
+		if isinstance(subitem, Admin):
 			if not subitem.is_set:
-				self.pti_factory(subitem.reader, item)
+				self.pti_factory(subitem.reader(), item)
 				self.pti_factory(subitem.data, item)
 				self.pti_factory(subitem.meta, item)
 				self.pti_factory(subitem.tree, item)
 				item.setExpanded(True)
-		elif isinstance(subitem, Northlight.TreeAdmin):
+		elif isinstance(subitem, TreeAdmin):
 			if item.childCount() == 0:
 				genlist_d = dict()
 				dlg = QtWidgets.QProgressDialog(self, labelText=f"Loading filemap tree for {subitem.admin.path.stem}...", maximum=300, autoClose=False, value=0, autoReset=False, minimumDuration=100)
@@ -393,11 +397,11 @@ class MainTree(QtWidgets.QWidget):
 				dlg.close()
 		
 	def updateDesc_Other(self, subitem) -> None:
-		if isinstance(subitem, Northlight.File):
+		if isinstance(subitem, File):
 			self.desc_hex.load(subitem.data)
 		elif isinstance(subitem, ReaderNLEv10):
 			self.desc_hex.load(subitem.uhd)
-		elif isinstance(subitem, Northlight.MetaAdmin):
+		elif isinstance(subitem, MetaAdmin):
 			if subitem.path is not None:
 				self.desc_hex.load(subitem.path.read_bytes())
 		else:
@@ -419,7 +423,7 @@ class MainTree(QtWidgets.QWidget):
 			for item in instance_cfg.keys:
 				if item in instance_cfg.keys:
 					if item not in instance_cfg.admindict.keys():
-						instance_cfg.admindict[item] = Northlight.Admin(item, instance_cfg)
+						instance_cfg.admindict[item] = Admin(item, instance_cfg)
 					self.pti_factory(instance_cfg.admindict[item], instance_pti)
 				else:
 					raise KeyError
