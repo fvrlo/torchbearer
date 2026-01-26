@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Callable
 
+from loguru import logger
 from PySide6 import QtCore, QtGui, QtWidgets
-from __feature__ import true_property # type: ignore
 
 
 class Quick:
@@ -17,9 +17,11 @@ class Quick:
 	def split(*items: QtWidgets.QWidget, orientation: QtCore.Qt.Orientation, childrenCollapsible: bool | None = None, opaqueResize: bool | None = None):
 		splitter = QtWidgets.QSplitter(orientation=orientation, childrenCollapsible=childrenCollapsible)
 		for item in items:
+			if not isinstance(item, QtWidgets.QWidget):
+				logger.debug(f"{item}")
 			splitter.addWidget(item)
 		if opaqueResize is not None:
-			splitter.opaqueResize = opaqueResize
+			splitter.setOpaqueResize(opaqueResize)
 		return splitter
 	
 	@staticmethod
@@ -29,7 +31,7 @@ class Quick:
 		for x in connections:
 			tbn.toggled.connect(x)
 		if toolTip is not None:
-			tbn.toolTip = toolTip
+			tbn.setToolTip(toolTip)
 		if icon is not None:
 			tbn.icon = icon
 		return tbn
@@ -45,8 +47,8 @@ class Quick:
 	@staticmethod
 	def txtview():
 		txt = QtWidgets.QTextEdit(readOnly=True)
-		txt.textInteractionFlags |= QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
-		txt.tabStopDistance = QtGui.QFontMetrics("Lucida Console").size(0, '    ').width()
+		#txt.textInteractionFlags = txt.textInteractionFlags | QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
+		txt.setTabStopDistance(QtGui.QFontMetrics("Lucida Console").size(0, '    ').width())
 		return txt
 
 	@staticmethod
@@ -55,7 +57,7 @@ class Quick:
 		actn.triggered.connect(caller)
 		menu.addAction(actn)
 		if icon is not None:
-			menu.icon = icon
+			menu.setIcon(icon)
 		return actn
 
 	@staticmethod
@@ -65,15 +67,15 @@ class Quick:
 		if fixedWidth is not None:
 			btn.setFixedWidth(fixedWidth)
 		if default is not None:
-			btn.default = default
+			btn.setDefault(default)
 		return btn
 
 	@staticmethod
 	def checkbox(text: str, caller: QtCore.Slot | Callable, defaultState: bool = False):
 		btn = QtWidgets.QCheckBox(text)
 		btn.pressed.connect(caller)
-		btn.checkable = True
-		btn.checked = defaultState
+		btn.setCheckable(True)
+		btn.setChecked(defaultState)
 		return btn
 
 	@staticmethod

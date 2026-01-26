@@ -6,7 +6,6 @@ from pathlib import Path
 import qtawesome as qta
 
 from PySide6 import QtCore, QtGui, QtWidgets
-from __feature__ import true_property #type: ignore
 
 from mulch import byter
 from mulch.qt.layouts import qGrid
@@ -57,7 +56,7 @@ class PathLineEdit(QtWidgets.QLineEdit):
 		new_path = Path(value).resolve()
 		new_path.mkdir(parents=True, exist_ok=True)
 		self._path = new_path
-		self.text = str(self._path)
+		self.setText(str(self._path))
 		self.pathChanged.emit(self._path)
 
 

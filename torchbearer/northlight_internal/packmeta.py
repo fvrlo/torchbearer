@@ -50,7 +50,7 @@ class PackMetaType:
 			self.name = stream.string(int(stream))
 		self.size = int(stream)
 		
-	def dict(self):
+	def dicto(self):
 		return {'MetadataType': f'hash={self.hash}, name={self.name}, size={self.size}'}
 
 
@@ -61,13 +61,13 @@ class PackMetaFile:
 	rid:    RID | None                  = field(kw_only=True)
 	meta:   list[DSC]   = field(kw_only=True)
 
-	def dict(self):
+	def dicto(self):
 		try:
-			return {"Offset": self.ofst, "Name": self.name, "RID": self.rid, "Meta": [x.dict() for x in self.meta]}
+			return {"Offset": self.ofst, "Name": self.name, "RID": self.rid, "Meta": [x.dicto() for x in self.meta]}
 		except AttributeError as e:
 			logger.error(f"PackMetaFile name={self.name}, offset={self.ofst}")
 			for i, x in enumerate(self.meta):
-				logger.error(f"PackMetaFile meta {i}: {x.dict()}")
+				logger.error(f"PackMetaFile meta {i}: {x.dicto()}")
 			raise e
 
 
@@ -111,8 +111,8 @@ class PackMeta:
 			metas = [tree[x.data.meta_index][x.data.file_index] for x in fmeget.data.subitems] if fmeget is not None else []
 			self.pmf_defs.append(PackMetaFile(ofst=k, name=self.names[i], rid=self.rid_ofsts.get(k, None), meta=metas))
 	
-	def dict(self) -> dict:
-		return {'tdefs': [x.dict() for x in self.pmt_defs], 'files': [x.dict() for x in self.pmf_defs]}
+	def dicto(self) -> dict:
+		return {'tdefs': [x.dicto() for x in self.pmt_defs], 'files': [x.dicto() for x in self.pmf_defs]}
 	
 	def log_partial_files(self):
 		for x in self.pmf_defs:

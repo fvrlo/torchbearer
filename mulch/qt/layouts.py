@@ -5,7 +5,6 @@ from typing import Literal, overload, Self
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtWidgets import QWidget, QGridLayout, QLayout, QLabel, QBoxLayout, QTabWidget
 from PySide6.QtCore import Qt, QMargins, QObject
-from __feature__ import true_property # type: ignore
 
 from mulch.qt.quick import Quick
 
@@ -159,7 +158,7 @@ class qBox(QBoxLayout):
 	             stretch:   list[int] | None = None,
 	             spacing:   int | None = None,
 	             margins:   int | None = None,
-	             name:      int | None = None,
+	             name:      str | None = None,
 	             parent:    QWidget | None = None
 	             ):
 		
@@ -178,16 +177,16 @@ class qBox(QBoxLayout):
 				super().__init__(QBoxLayout.Direction.TopToBottom, parent=parent)
 
 		if spacing is not None:
-			self.spacing = spacing
+			self.setSpacing(spacing)
 		if margins is not None:
-			self.contentsMargins = QMargins(margins, margins, margins, margins)  # noqa
+			self.setContentsMargins(QMargins(margins, margins, margins, margins))
 		for item in items:
 			if isinstance(item, tuple):
 				self.add(item[0], item[1])
 			else:
 				self.add(item)
 		if name is not None:
-			self.objectName = name
+			self.setObjectName(name)
 		if stretch is not None:
 			for i, s in enumerate(stretch):
 				self.setStretch(i, s)
@@ -266,7 +265,7 @@ class SquareHandler(QtCore.QObject):
 	def eventFilter(self, watched, event, /):
 		if isinstance(watched, QtWidgets.QWidget):
 			if isinstance(event, QtGui.QResizeEvent):
-				minsize = int(min(watched.width, watched.height) * self.scaleFactor)
+				minsize = int(min(watched.width(), watched.height()) * self.scaleFactor)
 				watched.geometry = QtCore.QRect(watched.pos.x(), watched.pos.y(), minsize, minsize)  # noqa
 		return super().eventFilter(watched, event)
 	

@@ -212,7 +212,7 @@ class DDS_PIXELFORMAT(ctypes.Structure):
 		cnst += r_mask + g_mask + b_mask + a_mask
 		return cls.from_buffer_copy(cnst)
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			"dwSize": self.dwSize,
 			"dwFlags": [x.name for x in self.dwFlags],
@@ -375,7 +375,7 @@ class DDS_HEADER(ctypes.Structure):
 		init_buffer += bytes(ddspf) + b''.join(x.to_bytes(4, 'little') for x in [caps1, caps2, caps3, caps4]) + (b'\x00' * 4)
 		return cls.from_buffer_copy(init_buffer)
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			"dwSize": self.dwSize,
 			"dwFlags": self.dwFlags,
@@ -535,8 +535,8 @@ class DDS_FILEHEAD(ctypes.Structure):
 	def is_cube(self) -> bool:
 		return bool(self.header.dwCaps2 & self.header.dwCaps2.CUBEMAP)
 	
-	def dict(self):
-		return self.header.dict()
+	def dicto(self):
+		return self.header.dicto()
 	
 	def alleged_pitch(self):
 		if self.header10 is not None:

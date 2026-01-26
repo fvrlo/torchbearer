@@ -32,7 +32,7 @@ class UnknownObjectOBRS:
 		self.cache.add(infostr)
 		self.count.append(infostr)
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			'name': self.name,
 			'data': self.data,

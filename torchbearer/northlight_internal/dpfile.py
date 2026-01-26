@@ -42,7 +42,7 @@ class DP_Offset:
 	def offset(self):
 		return (self.bit_offset * 8) + (4 if DP_Offset.OffsetFlags.overlap in self.flags else 0)
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			'raw offset': self.raw_offset,
 			'bit offset': self.bit_offset,
@@ -105,7 +105,7 @@ class BinFileDP:
 		for i, x in enumerate(ordered_ofst_list):
 			x.size = (ordered_ofst_list[i + 1].offset - x.offset) if x != ordered_ofst_list[-1] else abs(-self.dataSize + x.offset)
 
-	def dict(self):
+	def dicto(self):
 		return {
 			'Name'       : self.name,
 			'Header Type': self.headerType,

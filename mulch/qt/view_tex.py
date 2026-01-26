@@ -7,7 +7,6 @@ from loguru import logger
 from torchbearer.northlight_internal.textures.directx.DXGI import DXGI_FORMAT
 from PIL import ImageQt
 from PySide6 import QtCore, QtGui, QtWidgets
-from __feature__ import true_property #type: ignore
 
 __all__ = [
 	'TexViewer',
@@ -31,8 +30,10 @@ class TexViewerWidget(QtWidgets.QScrollArea):
 		super().__init__(*args, **kwargs)
 		self.img_sca = 1.0
 		self.img_lbl = QtWidgets.QLabel(scaledContents=True)
-		self.img_lbl.sizePolicy.setVerticalPolicy(QtWidgets.QSizePolicy.Policy.Ignored)
-		self.img_lbl.sizePolicy.setHorizontalPolicy(QtWidgets.QSizePolicy.Policy.Ignored)
+		sp = QtWidgets.QSizePolicy()
+		sp.setVerticalPolicy(QtWidgets.QSizePolicy.Policy.Ignored)
+		sp.setHorizontalPolicy(QtWidgets.QSizePolicy.Policy.Ignored)
+		self.img_lbl.setSizePolicy(sp)
 		self.img_lbl.minimumWidth = 200
 		self.img_lbl.minimumHeight = 200
 		

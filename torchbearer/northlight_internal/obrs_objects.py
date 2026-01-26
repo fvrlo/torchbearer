@@ -380,7 +380,7 @@ class Metadata:
 		height:                     int         = StreamFields.uint()                       # variable('height', textureMetadata.height);
 		depth:                      int         = StreamFields.uint()                       # variable('depth', textureMetadata.depth);
 		skip:                       bytes       = StreamFields.bytes(4)                     # skip(4);
-		mipmapOffsets:              list[int]   = StreamFields.iter(lambda x: x.i_4s, 8)    # variable('mipmapOffsets', textureMetadata.mipmapOffsets, 8lu);
+		mipmapOffsets:              list[int]   = StreamFields.iter(lambda x: x.i4s, 8)    # variable('mipmapOffsets', textureMetadata.mipmapOffsets, 8lu);
 		highDetailStreamDistance:   float       = StreamFields.float()                      # variable('highDetailStreamDistance', textureMetadata.highDetailStreamDistance);
 		useTextureLOD:              bool        = StreamFields.bool()                       # variable('useTextureLOD', textureMetadata.useTextureLOD);
 	
@@ -490,7 +490,7 @@ class Trigger_v20(StreamObject[BinFileDP]):
 	skip2:          bytes       = StreamFields.bytes(4)     # 	skip(4);
 	localeString:   str         = OBRSFields.str()      # 	variable('localeString', trigger.localeString, true);
 	skip3:          bytes       = StreamFields.bytes(12)    # 	skip(12);
-	values:         list[int]   = OBRSFields.list_binfile(lambda x: x.i_4s)   #   std::vector<sint> values; variable('', values);
+	values:         list[int]   = OBRSFields.list_binfile(lambda x: x.i4s)   #   std::vector<sint> values; variable('', values);
 	skip4:          bytes       = StreamFields.bytes(7)     #   skip(7)
 
 class Trigger_v18(StreamObject[BinFileDP]):
@@ -501,7 +501,7 @@ class Trigger_v18(StreamObject[BinFileDP]):
 	skip2:          bytes       = StreamFields.bytes(4)     # 	skip(4);
 	localeString:   str         = OBRSFields.str()      # 	variable('localeString', trigger.localeString, true);
 	skip3:          bytes       = StreamFields.bytes(12)    # 	skip(12);
-	values:         list[int]   = OBRSFields.list_binfile(lambda x: x.i_4s)   #   std::vector<sint> values; variable('', values);
+	values:         list[int]   = OBRSFields.list_binfile(lambda x: x.i4s)   #   std::vector<sint> values; variable('', values);
 	skip4:          bytes       = StreamFields.bytes(3)     #   skip(3)
 
 class KeyFrame_v1(StreamObject):

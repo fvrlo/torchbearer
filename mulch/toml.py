@@ -60,6 +60,6 @@ class ConfigTOML:
 		elif not self.tomlpath.exists():
 			raise FileNotFoundError(self.tomlpath)
 		valid_fields = self.__fields__()
-		for k, v in tomllib.loads(self.tomlpath.read_text()).items():
+		for k, v in tomllib.loads(self.tomlpath.read_text('utf8')).items():
 			if k in valid_fields.keys():
 				setattr(self, valid_fields[k].name, valid_fields[k].from_str(v))

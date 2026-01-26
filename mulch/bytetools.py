@@ -15,43 +15,45 @@ from itertools import batched
 
 from loguru import logger
 
+from mulch import Dictable
+
 __all__ = [
 	"byter",
 	"Stream",
+	"soDict",
 	"EndianLiteral",
 	"CloseStrCache",
-	"OutOfBoundsException",
 	"find_start_of_nts_array",
 	"StreamObject",
 	"StreamFields",
 	"ByteStreamField"
 ]
 
-from mulch import Dictable
-
 type EndianLiteral = Literal['little', 'big']
+type OptTuple[T] = tuple[T, Optional[T]]
 
-def byter(value: int) -> str:
+
+def byter(value: int, /, *, scale: int = 1024) -> str:
 	tm = 0
-	while value > 1024:
+	while value > scale:
 		tm += 1
-		value /= 1024
+		value /= scale
 	return f"{round(value, 2)} {['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'][tm]}"
 
 
 
 
+
+
 class _StreamTempConfig:
-	type TTuple[T] = tuple[T, Optional[T]]
-	
 	prnt: Stream
 	ppos: int
 	ofst: Optional[int]
 	odir: Optional[int]
-	endi: TTuple[EndianLiteral]
-	sign: TTuple[bool]
-	size: TTuple[int]
-	blen: TTuple[int]
+	endi: OptTuple[EndianLiteral]
+	sign: OptTuple[bool]
+	size: OptTuple[int]
+	blen: OptTuple[int]
 	
 	def __init__(self, /, prnt: Stream, *,
 	             ofst: Optional[int] = None,
@@ -124,9 +126,6 @@ class _DebugNamespace:
 		return ' '.join(cls.parse(x) for x in data)
 
 
-class OutOfBoundsException(Exception):
-	pass
-
 
 def find_start_of_nts_array(real_namecount: int, data: bytes) -> int:
 	with Stream(data[::-1]) as neg_stream:
@@ -156,8 +155,8 @@ def find_start_of_nts_array(real_namecount: int, data: bytes) -> int:
 
 
 class StreamObject[ExtraType]:
-	__so_init__: bool
-	__so_pos0__: int
+	_so_init: bool
+	_so_pos0: int
 	
 	@final
 	@classmethod
@@ -166,8 +165,8 @@ class StreamObject[ExtraType]:
 		return [v for v in cls.__dict__.values() if isinstance(v, ByteStreamField)]
 	
 	def __init__(self, stream: Stream, /, *, extra: ExtraType = None):
-		self.__so_init__ = False
-		self.__so_pos0__ = stream.tell()
+		self._so_init = False
+		self._so_pos0 = stream.tell()
 		somdesc = self.__so_fields__()
 		
 		if len(stream) == 0 and len(somdesc) != 0:
@@ -185,18 +184,17 @@ class StreamObject[ExtraType]:
 		
 		set_attrs = [x for x in self.__dict__.keys() if '_bsf_' in x]
 		assert len(set_attrs) == len(somdesc), (len(set_attrs), len(somdesc), self.__dict__.keys())
-		self.__so_init__ = True
-	
-	def dict(self):
-		if not self.__so_init__:
-			raise AttributeError
-		attrkeys = [name for name in self.__dict__.keys() if ('_' not in name) and (name != 'dict') and (name != 'container')]
-		gen = {k: getattr(self, k) for k in [name for name in attrkeys if not (inspect.ismethod(self.__dict__[name]) or inspect.isfunction(self.__dict__[name]))]}
-		for k in self.__so_fields__():
-			gen[k.__bsf_orig__] = k.__get__(self, self.__class__)
-		return {k: (v.dict() if isinstance(v, Dictable) else v) for k, v in gen.items()}
+		self._so_init = True
 
 
+def soDict(self: StreamObject):
+	if not self._so_init:
+		raise AttributeError
+	attrkeys = [name for name in self.__dict__.keys() if ('_' not in name) and (name != 'dicto') and (name != 'container')]
+	gen = {k: getattr(self, k) for k in [name for name in attrkeys if not (inspect.ismethod(self.__dict__[name]) or inspect.isfunction(self.__dict__[name]))]}
+	for k in self.__so_fields__():
+		gen[k.__bsf_orig__] = k.__get__(self, self.__class__)
+	return {k: (v.dicto() if isinstance(v, Dictable) else soDict(v) if isinstance(v, StreamObject) else v) for k, v in gen.items()}
 
 
 
@@ -224,7 +222,7 @@ class ByteStreamField[returnType, extraType](ABC):
 			logger.error(f"Arguments: obj={obj} ({type(obj)}), objtype={objtype} ({type(objtype)})")
 			logger.error(f"Is the object even a StreamObject?: {isinstance(obj, StreamObject)}")
 			logger.error(f"Real type: {obj} ({type(obj)}, caller says {objtype})")
-			logger.error(f"Initialized?: {obj.__so_init__}")
+			logger.error(f"Initialized?: {obj._so_init}")
 			logger.error(f"__get__ caller type: {objtype.__name__}")
 			logger.error(f"stream fields: {[x for x in dir(obj) if '_bsf_' in x]}")
 			raise e
@@ -235,10 +233,10 @@ class ByteStreamField[returnType, extraType](ABC):
 			setattr(obj, self.__bsf_name__, value)
 			assert value == getattr(obj, self.__bsf_name__)
 			return True
-		except OutOfBoundsException as e:
+		except Stream.OutOfBoundsException as e:
 			logger.error(f"{obj.__class__.__name__} errored when initializing field {self.__bsf_name__}")
-			logger.error(f"start: {obj.__so_pos0__}, current pos: {stream.tell()}")
-			logger.error(f"{Stream.debug.print(stream.peekskip(-(stream.tell() - obj.__so_pos0__), stream.tell() - obj.__so_pos0__), decode=False)}")
+			logger.error(f"start: {obj._so_pos0}, current pos: {stream.tell()}")
+			logger.error(f"{Stream.debug.print(stream.peekskip(-(stream.tell() - obj._so_pos0), stream.tell() - obj._so_pos0), decode=False)}")
 			raise e
 		except AssertionError as e:
 			logger.error(f"{obj.__class__.__name__} errored when initializing field {self.__bsf_name__}")
@@ -266,6 +264,15 @@ class StreamFields:
 		def caller(self, stream, obj, extra):
 			logger.info(f"peek (starting at {stream.tell()}): {Stream.debug.print(stream.peek(self.size), decode=False)}")
 	
+	class none(ByteStreamField[None, None]):
+		"""A field meant for simply returning a `None` value."""
+		
+		def __init__(self):
+			pass
+		
+		def caller(self, stream, obj, extra):
+			return None
+	
 	class peekskip(ByteStreamField[None, None]):
 		"""A field meant for skipping a distance, peeking in a stream, logging what it finds, and returning nothing else. Useful for debugging StreamObject parsing."""
 		
@@ -277,11 +284,16 @@ class StreamFields:
 			logger.info(f"peek: {Stream.debug.print(stream.peekskip(self.skip, self.size), decode=False)}")
 	
 	class bytes(ByteStreamField[bytes, None]):
-		def __init__(self, size: int, /):
+		def __init__(self, size: int, /, *, lpad: int = 0, rpad: int = 0):
 			self.size = size
+			self.lpad = lpad
+			self.rpad = rpad
 		
 		def caller(self, stream, obj, extra):
-			return stream[self.size]
+			stream.skip(self.lpad)
+			x = stream[self.size]
+			stream.skip(self.rpad)
+			return x
 	
 	class crc(ByteStreamField[str, None]):
 		def caller(self, stream, obj, extra):
@@ -484,6 +496,10 @@ class Stream:
 	debug = _DebugNamespace
 	
 	
+	class OutOfBoundsException(Exception):
+		pass
+	
+	
 	# Dunder Methods
 	
 	def __init__(self,
@@ -516,7 +532,7 @@ class Stream:
 		
 		self.read_count = 0
 		if spos is not None:
-			self.internal_io.seek(spos, 0)
+			self.seek(spos)
 		self.endi = endi
 		self.sign = sign
 		self.size = size
@@ -567,7 +583,7 @@ class Stream:
 			return self.read(i)
 	
 	def nts(self, min_len: int = 1, /, encoding: str = "utf-8") -> str:
-		"""Method for reading a null-terminated string (AKA CString)."""
+		"""Method for reading a null-terminated string (AKA CString). Should work for UTF-8."""
 		array = bytearray()
 		yield_count = 0
 		while True:
@@ -645,6 +661,8 @@ class Stream:
 		return self.to_hexstr(self[distance], endi=endi)
 	
 	def skip(self, distance: int) -> bytes:
+		if distance == 0:
+			return b''
 		return self[distance]
 	
 	def iter[iterType](self, caller: Callable[[Stream], iterType], length: int, /) -> list[iterType]:
@@ -656,7 +674,7 @@ class Stream:
 	def read(self, __n: int = -1, /) -> bytes:
 		if self.len != 0:
 			if __n > self.remaining():
-				raise OutOfBoundsException(f"{__n} > {self.remaining()} (len: {self.len}, pos: {self.tell()})")
+				raise self.OutOfBoundsException(f"{__n} > {self.remaining()} (len: {self.len}, pos: {self.tell()})")
 			self.read_count += __n if __n >= 1 else 0
 			return self.internal_io.read(__n)
 		else:
@@ -674,15 +692,19 @@ class Stream:
 			return self.read(size)
 	
 	def read_lz4_block(self, cmp_size: int, dcp_size: int, is_compressed: bool, offset: int = -1) -> bytes:
+		startpos = self.tell()
 		if offset != -1:
 			self.seek(offset, 0)
 		if is_compressed:
 			dcp = block.decompress(self.read(cmp_size), uncompressed_size=dcp_size)
 			if len(dcp) != dcp_size:
 				logger.error(f'Size difference encountered: expected {dcp_size}, got {len(dcp)}')
+			self.seek(startpos)
 			return dcp
 		else:
-			return self.read(dcp_size)
+			x = self.read(dcp_size)
+			self.seek(startpos)
+			return x
 	
 	def integer(self, length: int | None = None, /, signed: bool | None = None, endi: EndianLiteral | None = None) -> int:
 		if length is None:
@@ -748,37 +770,37 @@ class Stream:
 	
 	# <------   Signed Integers    ------>
 	@property
-	def i_2s(self) -> int:
+	def i2s(self) -> int:
 		return self.integer(2, signed=True)
 	
 	@property
-	def i_3s(self) -> int:
+	def i3s(self) -> int:
 		return self.integer(3, signed=True)
 	
 	@property
-	def i_4s(self) -> int:
+	def i4s(self) -> int:
 		return self.integer(4, signed=True)
 	
 	@property
-	def i_8s(self) -> int:
+	def i8s(self) -> int:
 		return self.integer(8, signed=True)
 	
 	
 	# <------   Unsigned Integers    ------>
 	@property
-	def i_2u(self) -> int:
+	def i2u(self) -> int:
 		return self.integer(2, signed=False)
 	
 	@property
-	def i_3u(self) -> int:
+	def i3u(self) -> int:
 		return self.integer(3, signed=False)
 	
 	@property
-	def i_4u(self) -> int:
+	def i4u(self) -> int:
 		return self.integer(4, signed=False)
 	
 	@property
-	def i_8u(self) -> int:
+	def i8u(self) -> int:
 		return self.integer(8, signed=False)
 	
 	

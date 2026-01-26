@@ -1,5 +1,4 @@
-name = "Alan Wake's American Nightmare"
 key = "AWN"
-version = "latest"
+name = "Alan Wake's American Nightmare"
 path = "C:/Program Files (x86)/Steam/steamapps/common/alan wakes american nightmare"
-cfg_vsn = 1.0
+version = "latest"

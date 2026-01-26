@@ -106,7 +106,7 @@ class BoundSphere:
 class RID:
 	value: bytes
 	
-	def dict(self):
+	def dicto(self):
 		return {'RID': str(self)}
 	
 	@classmethod
@@ -131,11 +131,11 @@ class GID:
 	def isNil(self) -> bool:
 		return self == None
 	
-	def dict(self):
+	def dicto(self):
 		return {'GID': {'Type': self.type, 'ID': self.id, 'ID Hex': self.id_hex}}
 	
 	def __init__(self, stream: Stream):
-		self.type = stream.i_4u
+		self.type = stream.i4u
 		self.id = stream.integer(4, signed=False, endi='big')
 	
 	def __str__(self):
@@ -179,7 +179,7 @@ class ObjectID:
 		if obj_id is None:
 			self.value = value
 		elif isinstance(value, Stream):
-			self.value = value.i_4u
+			self.value = value.i4u
 		elif isinstance(value, int):
 			self.value = value | (obj_id << 9)
 		self.type = self.value & 0x1FF

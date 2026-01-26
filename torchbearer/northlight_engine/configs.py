@@ -4,6 +4,8 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from loguru import logger
+
 from mulch.toml import ConfigTOML, field
 
 if TYPE_CHECKING:
@@ -30,6 +32,7 @@ class AppConfig(ConfigTOML):
 			ConfigTOML.writetoml(cfgpath, cach="./cache", conf="./config", expo="./export")
 		super().__init__(cfgpath)
 		for k in self.conf.glob('*.toml'):
+			logger.debug(f'debug {k}')
 			InstanceConfig(self, k)
 	
 	def load_instances(self):

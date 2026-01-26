@@ -6,12 +6,11 @@ from functools import cached_property
 from pathlib import Path
 from typing import final, Literal, Protocol
 
-import numpy as np
 from loguru import logger
 
 from mulch import CloseStrCache, Stream, TimerLog
 from torchbearer.northlight_engine.configs import InstanceConfig
-from torchbearer.northlight_engine.marshall import NPD, OFSZ
+from torchbearer.northlight_engine.marshall import Abstracts, Objects, OFSZ
 
 __all__ = [
 	"Reader",
@@ -47,8 +46,8 @@ class Reader(ABC):
 	count_d_main: int
 	count_f_main: int
 
-	main_d: list[Protos.Folder]
-	main_f: list[Protos.File]
+	main_d: dict[int, Protos.Folder]
+	main_f: dict[int, Protos.File]
 	
 	_relmap_d: dict[int, list[int]] | None
 	_relmap_f: dict[int, list[int]] | None
@@ -78,7 +77,7 @@ class Reader(ABC):
 	def relmap_d(self) -> dict[int, list[int]]:
 		if self._relmap_d is None:
 			self._relmap_d = defaultdict(list)
-			for i, x in enumerate(self.main_d):
+			for i, x in self.main_d.items():
 				if x.parent_idx != -1:
 					self._relmap_d[x.parent_idx].append(i)
 		return self._relmap_d
@@ -87,7 +86,7 @@ class Reader(ABC):
 	def relmap_f(self) -> dict[int, list[int]]:
 		if self._relmap_f is None:
 			self._relmap_f = defaultdict(list)
-			for i, x in enumerate(self.main_f):
+			for i, x in self.main_f.items():
 				self._relmap_f[x.parent_idx].append(i)
 		return self._relmap_f
 	
@@ -149,10 +148,10 @@ class ReaderNLEv10(Reader):
 	count_d_root: int
 	count_f_root: int
 	
-	main_d: list[NPD.RMDP_D]
-	main_f: list[NPD.RMDP_F]
-	root_d: list[NPD.RMDP_D]
-	root_f: list[NPD.RMDP_F]
+	main_d: dict[int, Abstracts.D]
+	main_f: dict[int, Abstracts.F]
+	root_d: dict[int, Abstracts.D]
+	root_f: dict[int, Abstracts.F]
 	
 	uhd: bytes
 	
@@ -162,9 +161,9 @@ class ReaderNLEv10(Reader):
 			with Stream(self.path_bin) as stream:
 				match mode:
 					case 'fldr':
-						CloseStrCache.write(strcache, {i: stream.nts_at(self.eoa + x.name_offset) if x.name_offset != -1 else '' for i, x in enumerate(self.main_d)})
+						CloseStrCache.write(strcache, {i: stream.nts_at(self.eoa + x.name_offset) if x.name_offset != -1 else '' for i, x in self.main_d.items()})
 					case 'file':
-						CloseStrCache.write(strcache, {i: stream.nts_at(self.eoa + x.name_offset) if x.name_offset != -1 else '' for i, x in enumerate(self.main_f)})
+						CloseStrCache.write(strcache, {i: stream.nts_at(self.eoa + x.name_offset) if x.name_offset != -1 else '' for i, x in self.main_f.items()})
 		return CloseStrCache.read(strcache)
 	
 	def __init__(self, instance: InstanceConfig, rmdp_path: Path):
@@ -194,27 +193,23 @@ class ReaderNLEv10(Reader):
 					f"RMDP version 2 decoder (dc=<le>{self.count_d_main}</le>, fc=<le>{self.count_f_main}</le>, eoh=<le>{self.eoh}</le>, eoa=<le>{self.eoa}</le>) resulted in decision <le>{self.version_minor}</le>")
 			match self.version_minor:
 				case 2:
-					d_type, f_type = NPD.DT_D_AW1, NPD.DT_F_AW1
+					d_type, f_type = Objects.D_AW1, Objects.F_AW1
 				case 3:
-					d_type, f_type = NPD.DT_D_AWR, NPD.DT_F_AWR
+					d_type, f_type = Objects.D_AWR, Objects.F_AWR
 				case 7:
-					d_type, f_type = NPD.DT_D_LE7, NPD.DT_F_LE7
+					d_type, f_type = Objects.D_LE7, Objects.F_LE7
 				case 8 | 9:
-					d_type, f_type = NPD.DT_D_LE8, NPD.DT_F_LE8
+					d_type, f_type = Objects.D_LE8, Objects.F_LE8
 				case _:
 					raise ValueError(self.version_minor)
-			self.main_d = [NPD.RMDP_D.via_void(i, x) for i, x in
-			               enumerate(np.frombuffer(stream.read(d_type.itemsize * self.count_d_main), dtype=d_type, count=self.count_d_main))]  # type: ignore
-			self.main_f = [NPD.RMDP_F.via_void(i, x) for i, x in
-			               enumerate(np.frombuffer(stream.read(f_type.itemsize * self.count_f_main), dtype=f_type, count=self.count_f_main))]  # type: ignore
-			self.root_d = [NPD.RMDP_D.via_void(i, x) for i, x in
-			               enumerate(np.frombuffer(stream.read(d_type.itemsize * self.count_d_root), dtype=d_type, count=self.count_d_root))]  # type: ignore
-			self.root_f = [NPD.RMDP_F.via_void(i, x) for i, x in
-			               enumerate(np.frombuffer(stream.read(f_type.itemsize * self.count_f_root), dtype=f_type, count=self.count_f_root))]  # type: ignore
+			self.main_d = {i: d_type(stream) for i in range(self.count_d_main)}
+			self.main_f = {i: f_type(stream) for i in range(self.count_f_main)}
+			self.root_d = {i: d_type(stream) for i in range(self.count_d_root)}
+			self.root_f = {i: f_type(stream) for i in range(self.count_f_root)}
 
 
 class ReaderNLEv20(Reader):
-	table: NPD.RMDTOC_Table
+	table: Objects.RMDTOC_Table
 	data_dcp: Path
 	
 	def __init__(self, instance: InstanceConfig, path: Path):
@@ -222,8 +217,8 @@ class ReaderNLEv20(Reader):
 			if path.suffix != '.rmdtoc':
 				raise ValueError(f"Path extension invalid, expected '.rmdtoc' but got '{path.suffix}'")
 			with Stream(path) as temp:
-				self.table = NPD.RMDTOC_Table(temp)
-			super().__init__(instance=instance, path=path, v_major=2, v_minor=self.table.version)
+				self.table = Objects.RMDTOC_Table(temp)
+			super().__init__(instance=instance, path=path, v_major=2, v_minor=self.table.vrsn)
 			self.pfx = ''
 			self.data_dcp = self.cache_dir / (self.path.stem + '.rmdtoc_decompressed')
 			make_cache = False
@@ -237,39 +232,41 @@ class ReaderNLEv20(Reader):
 				with TimerLog(f'{self.logname} - decompressing table ({self.table.tabl.size // 16} chunks)'):
 					dcpdat = bytearray()
 					with Stream(self.path) as stream:
-						for c in NPD.RMDTOC_Chunk.parse(stream, self.table.tabl):
+						stream.seek(self.table.tabl.ofst)
+						for i in range(self.table.tabl.size // 16):
+							c = Objects.RMDTOC_Chunk(stream)
 							dcpdat += stream.read_lz4_block(c.compressed, c.decompressed, c.lz4, offset=c.offset)
 					self.data_dcp.write_bytes(dcpdat)
 	
 	@cached_property
-	def main_d(self) -> list[NPD.RMDTOC_D]:
+	def main_d(self) -> dict[int, Objects.RMDTOC_D]:
 		with TimerLog(f'{self.logname} - fldr cache gen'):
-			with Stream(self.data_dcp) as stream:
-				return NPD.RMDTOC_D.parse(stream, self.table.fldr)
+			with Stream(self.data_dcp, spos=self.table.fldr.ofst) as stream:
+				return {i: Objects.RMDTOC_D(stream) for i in range(self.table.fldr.size)}
 	
 	@cached_property
-	def main_f(self) -> list[NPD.RMDTOC_F]:
+	def main_f(self) -> dict[int, Objects.RMDTOC_F]:
 		with TimerLog(f'{self.logname} - file cache gen'):
-			with Stream(self.data_dcp) as stream:
-				return NPD.RMDTOC_F.parse(stream, self.table.file)
+			with Stream(self.data_dcp, spos=self.table.file.ofst) as stream:
+				return {i: Objects.RMDTOC_F(stream) for i in range(self.table.file.size)}
 	
 	@cached_property
-	def cache_arch(self) -> list[NPD.RMDTOC_Archive]:
+	def cache_arch(self) -> dict[int, Objects.RMDTOC_Archive]:
 		with TimerLog(f'{self.logname} - arch cache gen'):
-			with Stream(self.data_dcp) as stream:
-				return NPD.RMDTOC_Archive.parse(stream, self.table.arch)
+			with Stream(self.data_dcp, spos=self.table.arch.ofst) as stream:
+				return {i: Objects.RMDTOC_Archive(stream) for i in range(self.table.arch.size)}
 	
 	@cached_property
-	def cache_chnk(self) -> list[NPD.RMDTOC_Chunk]:
+	def cache_chnk(self) -> dict[int, Objects.RMDTOC_Chunk]:
 		with TimerLog(f'{self.logname} - chnk cache gen'):
-			with Stream(self.data_dcp) as stream:
-				return NPD.RMDTOC_Chunk.parse(stream, self.table.chnk)
+			with Stream(self.data_dcp, spos=self.table.chnk.ofst) as stream:
+				return {i: Objects.RMDTOC_Chunk(stream) for i in range(self.table.chnk.size // 16)}
 	
 	@cached_property
-	def cache_mdty(self) -> list[OFSZ]:
+	def cache_mdty(self) -> dict[int, OFSZ]:
 		with TimerLog(f'{self.logname} - mdty cache gen'):
-			with Stream(self.data_dcp) as stream:
-				return self.table.mdty.parse(stream)
+			with Stream(self.data_dcp, spos=self.table.mdty.ofst) as stream:
+				return {i: OFSZ(stream) for i in range(self.table.mdty.size)}
 	
 	@cached_property
 	def data_stng(self) -> bytes:
@@ -289,11 +286,11 @@ class ReaderNLEv20(Reader):
 			with Stream(self.data_stng) as stream:
 				match mode:
 					case 'fldr':
-						CloseStrCache.write(strcache, {i: stream.read_at(x.name.ofst, x.name.size).decode() for i, x in enumerate(self.main_d)})
+						CloseStrCache.write(strcache, {i: stream.read_at(x.name.ofst, x.name.size).decode() for i, x in self.main_d.items()})
 					case 'file':
-						CloseStrCache.write(strcache, {i: stream.read_at(x.name.ofst, x.name.size).decode() for i, x in enumerate(self.main_f)})
+						CloseStrCache.write(strcache, {i: stream.read_at(x.name.ofst, x.name.size).decode() for i, x in self.main_f.items()})
 					case 'arch':
-						CloseStrCache.write(strcache, {i: stream.read_at(x.path.ofst, x.path.size).decode() for i, x in enumerate(self.cache_arch)})
+						CloseStrCache.write(strcache, {i: stream.read_at(x.path.ofst, x.path.size).decode() for i, x in self.cache_arch.items()})
 					case 'mdty':
-						CloseStrCache.write(strcache, {i: stream.read_at(x.ofst, x.size).decode() for i, x in enumerate(self.cache_mdty)})
+						CloseStrCache.write(strcache, {i: stream.read_at(x.ofst, x.size).decode() for i, x in self.cache_mdty.items()})
 		return CloseStrCache.read(strcache)

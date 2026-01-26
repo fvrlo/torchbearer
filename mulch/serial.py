@@ -23,7 +23,7 @@ def dd() -> defaultdict:
 
 @runtime_checkable
 class Dictable(Protocol):
-	def dict(self) -> dict: ...
+	def dicto(self) -> dict: ...
 
 @runtime_checkable
 class YamlStringable(Protocol):

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, ClassVar
 
-from mulch import Stream, OutOfBoundsException, yamldump, find_start_of_nts_array
+from mulch import Stream, yamldump, find_start_of_nts_array
 from .cid_base import Datastream, DSC, RMDL_DSC
 from .obrs import ObjectBinaryReadStream_v1, UnknownObjectOBRS
 from .types_general import RID
@@ -86,7 +86,7 @@ def binfile(name: str, data: bytes) -> BinFileStringTable | BinFileStreamedResou
 
 def bin_explorer(data: bytes, name: str) -> str:
 	file = binfile(name, data)
-	out = yamldump(file.dict())
+	out = yamldump(file.dicto())
 	
 	if isinstance(file, BinFileArchive):
 		out += f"Subfiles:\n"
@@ -112,7 +112,7 @@ class BinFileAltCID:
 		self.name = name
 		self.data = data
 	
-	def dict(self):
+	def dicto(self):
 		return {'datalen': len(self.data)}
 
 
@@ -131,7 +131,7 @@ class BinnedDataEntry:
 	ofst: int
 	data: bytes
 	
-	def dict(self):
+	def dicto(self):
 		return {'name': self.name, 'size': self.size, 'ofst': self.ofst}
 
 
@@ -163,7 +163,7 @@ class BinFileArchive:
 	def files(self) -> dict[str, bytes]:
 		return {x.name: x.data for x in self.entries.values()}
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			'icount' : self.icount,
 			'sizesum': self.sizesum,
@@ -216,7 +216,7 @@ class BinFileStreamedResource:
 	
 	datapairs: ClassVar[dict[str, int]] = dict()
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			'name': self.name,
 			'size': self.size,
@@ -323,7 +323,7 @@ class BinFileCID:
 							logger.debug(f'error on {objtype} #{i + 1}/{self.numElements} (pos: {self.stream.tell()}/{self.size})')
 							break
 					yield obj
-			except OutOfBoundsException as e:
+			except Stream.OutOfBoundsException as e:
 				logger.debug(f'while yielding from {objtype}, an OutOfBounds exception occurred: {e}')
 				return
 		
@@ -332,7 +332,7 @@ class BinFileCID:
 		ees = ((self.size - 16)/self.numElements) if self.numElements != 0 else 0
 		return int(ees) if ees.is_integer() else 'Unsure'
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			'Format': self.form,
 			'Size': self.size,
@@ -354,5 +354,5 @@ class BinFileStringTable:
 			self.pairs = [(stream[int(stream)].decode('utf-8'), stream[int(stream) * 2].decode('utf-16le')) for _ in range(int(stream))]
 	# the value's length gets doubled because the value count is count of characters and the format is UTF-16, something about character widths goes here
 	
-	def dict(self):
+	def dicto(self):
 		return {'name': self.name, 'count': len(self.pairs)}

@@ -106,7 +106,7 @@ class NorthlightTex_Header(ctypes.LittleEndianStructure):
 	def __repr__(self):
 		return f"<NorthlightTex_Header(type={self.type}, form={self.form}, dimw={self.dimw}, dimh={self.dimh}, dimd={self.dimd}, mmap={self.mmap}, fltr={self.fltr}, unkw={self.unkw})"
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			"type": self.type,
 			"form": self.form,
@@ -125,7 +125,7 @@ class NorthlightTex_ImageFile(ImageFile.ImageFile):
 	def _open(self) -> None:
 		header = NorthlightTex_Header.from_buffer_copy(self.fp.read(32))
 		self._size = (header.dimw, header.dimh)
-		self.info['TEX Header'] = header.dict()
+		self.info['TEX Header'] = header.dicto()
 		# not sure what the differences are yet, not alpha premultiplication
 		
 		match header.form:

@@ -8,7 +8,7 @@ from typing import ClassVar, final, Self
 
 from loguru import logger
 
-from mulch import Stream, ByteStreamField, StreamFields, StreamObject
+from mulch import soDict, Stream, ByteStreamField, StreamFields, StreamObject
 
 from .types_general import BoundBox, RID
 
@@ -112,7 +112,7 @@ class UnknownBinData(Datastream, name='UnknownBinData', typehash='', vrsn=0):
 		self.data = data
 		self.key = key
 		
-	def dict(self):
+	def dicto(self):
 		return {'key': self.key, 'data': self.data.hex().upper()}
 
 
@@ -155,14 +155,14 @@ class BatchDSC[ETYPE: Datastream](StreamObject[str]):
 	def entry_types(self) -> str:
 		return ', '.join(set(x.dscval.data.__ds_iden__() for x in self.entries))
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			'name': self.name,
 			'sections': self.sections,
 			'vrsn': self.vrsn,
 			'ctyp': self.ctyp,
 			'unko': self.unko,
-			'entries': {x.lutval.hex().upper(): x.dscval.dict() for x in self.entries}
+			'entries': {x.lutval.hex().upper(): x.dscval.dicto() for x in self.entries}
 		}
 
 
@@ -196,8 +196,8 @@ class RMDL_DSC[ETYPE: Datastream[None]]:
 			else:
 				self.entries[v['name']] = BatchDSC(stream, v['name'])
 	
-	def dict(self):
-		return {k: {'types': v.entry_types(), 'dict': v.dict()} for k, v in self.entries.items()}
+	def dicto(self):
+		return {k: {'types': v.entry_types(), 'dict': v.dicto()} for k, v in self.entries.items()}
 
 
 class DSC[T: Datastream[DSC]](ABC):
@@ -214,12 +214,12 @@ class DSC[T: Datastream[DSC]](ABC):
 		DSC.__dsc_objs__[cls].add(instance)
 		return instance
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			'size'    : self.size,
 			'typehash': self.typehash,
 			'vrsn'    : self.vrsn,
-			'data'    : self.data.dict()
+			'data'    : soDict(self.data)
 		}
 	
 
@@ -538,7 +538,7 @@ class ResourceMetadata_v1(Datastream, typehash="184CFA41", vrsn=1, name="content
 	rid: DSC[ResourceID_content_v1] = StreamFields.call(lambda x: Datastream.beef_container(x))
 	resourceType: int = StreamFields.uint()
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			'RID'         : str(self.rid.data.rid),
 			'resourceType': self.resourceType,

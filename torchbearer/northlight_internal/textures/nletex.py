@@ -137,7 +137,7 @@ class NorthlightTexHeader(ctypes.LittleEndianStructure):
 	def dimensions(self) -> str:
 		return f"{self.width}x{self.height}"
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			"textype": self.textype,
 			"texfmt": self.texfmt,
@@ -288,9 +288,9 @@ class NorthlightTex:
 	def bytelen(self) -> int:
 		return len(self.texData)
 	
-	def dict(self):
+	def dicto(self):
 		return {
-			"header": self.header.dict(),
+			"header": self.header.dicto(),
 			"bytelen": self.bytelen,
 		}
 	

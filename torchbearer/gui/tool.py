@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import qtawesome as qta
 
 from PySide6 import QtGui, QtWidgets, QtCore
-from __feature__ import true_property #type: ignore
 
 from loguru import logger
 
 from torchbearer.gui.config_widgets import ConfigWindow
-from mulch import PathPlus, byter, PassingException, yamldump, TimerLog, Dictable
-from mulch import TexViewerWidget, UserRoles, HexViewer, HexTableView, TexViewer, qGrid, qBox
+from mulch import PathPlus, byter, PassingException, yamldump, TimerLog, Dictable, soDict, TexViewerWidget, UserRoles, HexViewer, HexTableView, TexViewer, qGrid, qBox
 from mulch.qt.quick import Quick
 
 from torchbearer.northlight_engine.engine import Admin, TreeAdmin, MetaAdmin, DataAdmin, Folder, File
@@ -80,16 +77,16 @@ class TreePTI(QtWidgets.QTreeWidget):
 	
 	def __init__(self, headers: list[str], /, *, parent: QtWidgets.QWidget | None = None,):
 		super().__init__(parent, columnCount=len(headers))
-		self.indentation = 10
-		self.uniformRowHeights = True
-		self.selectionMode = QtWidgets.QAbstractItemView.SelectionMode.SingleSelection
-		self.sizeAdjustPolicy = QtWidgets.QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents
+		self.setIndentation(10)
+		self.setUniformRowHeights(True)
+		self.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+		self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
 		for i, x in enumerate(headers):
 			self.model().setHeaderData(i, QtCore.Qt.Orientation.Horizontal, x)
 			self.header().setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 		self.model().headerDataChanged.emit(QtCore.Qt.Orientation.Horizontal, 0, len(headers) - 1)
 		self.menu_ctx = QtWidgets.QMenu(self)
-		self.contextMenuPolicy = QtCore.Qt.ContextMenuPolicy.DefaultContextMenu
+		self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.DefaultContextMenu)
 		
 		self.action_exportf = Quick.action(self, self.menu_ctx, 'Export', self.export_file, icon=qta.icon('fa6s.download'))
 		self.action_showexp = Quick.action(self, self.menu_ctx, 'Show in Explorer', self.open_folder)
@@ -101,20 +98,20 @@ class TreePTI(QtWidgets.QTreeWidget):
 	def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
 		subitem = self.ptisel()
 		if isinstance(subitem, File):
-			self.action_exportf.enabled = True
-			self.action_showexp.enabled = True
-			self.action_preview.enabled = subitem.extension in ['dds', 'tex']
-			self.action_clrtree.enabled = False
-			self.action_cllapse.enabled = True
+			self.action_exportf.setEnabled(True)
+			self.action_showexp.setEnabled(True)
+			self.action_preview.setEnabled(subitem.extension in ['dds', 'tex'])
+			self.action_clrtree.setEnabled(True)
+			self.action_cllapse.setEnabled(True)
 			self.menu_ctx.popup(QtGui.QCursor.pos())
 			event.accept()
 			return True
 		elif isinstance(subitem, Admin):
-			self.action_exportf.enabled = False
-			self.action_showexp.enabled = False
-			self.action_preview.enabled = False
-			self.action_clrtree.enabled = True
-			self.action_cllapse.enabled = True
+			self.action_exportf.setEnabled(False)
+			self.action_showexp.setEnabled(False)
+			self.action_preview.setEnabled(False)
+			self.action_clrtree.setEnabled(True)
+			self.action_cllapse.setEnabled(True)
 			self.menu_ctx.popup(QtGui.QCursor.pos())
 			event.accept()
 			return True
@@ -287,11 +284,11 @@ class MainTree(QtWidgets.QWidget):
 				for x in QtWidgets.QTreeWidgetItemIterator(self.tree_pti, flags=QtWidgets.QTreeWidgetItemIterator.IteratorFlag.Hidden):
 					x.value().setHidden(False)
 			else:
-				for tli in [self.tree_pti.topLevelItem(i) for i in range(self.tree_pti.topLevelItemCount)]:
+				for tli in [self.tree_pti.topLevelItem(i) for i in range(self.tree_pti.topLevelItemCount())]:
 					for item in self.tree_pti.nested_children(tli):
 						subitem = item.data(0, UserRoles.PTI)
 						if isinstance(subitem, File):
-							if self.fltr_eql.checked:
+							if self.fltr_eql.isChecked():
 								decision = item.text(headerdict[self.fltr_col.currentText]) != self.fltr_txt.text
 							else:
 								decision = self.fltr_txt.text not in item.text(headerdict[self.fltr_col.currentText])
@@ -338,14 +335,14 @@ class MainTree(QtWidgets.QWidget):
 				case 'tex':
 					hndlr = tex_handler(subitem)
 					if hndlr is not None:
-						self.desc_txt.plainText = yamldump(hndlr.dict())
+						self.desc_txt.plainText = yamldump(soDict(hndlr))
 					else:
 						self.desc_txt.plainText = ''
 				case _:
 					self.desc_txt.plainText = ''
 		elif isinstance(subitem, MetaAdmin):
 			if subitem.path is not None:
-				self.desc_txt.plainText = yamldump(PackMeta(subitem.path, subitem.admin.reader().version_minor).dict())
+				self.desc_txt.plainText = yamldump(PackMeta(subitem.path, subitem.admin.reader().version_minor).dicto())
 			elif len(subitem.metadata_types) != 0:
 				self.desc_txt.plainText = yamldump(subitem.metadata_types)
 			else:
@@ -376,21 +373,21 @@ class MainTree(QtWidgets.QWidget):
 			if item.childCount() == 0:
 				genlist_d = dict()
 				dlg = QtWidgets.QProgressDialog(self, labelText=f"Loading filemap tree for {subitem.admin.path.stem}...", maximum=300, autoClose=False, value=0, autoReset=False, minimumDuration=100)
-				dlg.windowTitle = "Torchbearer Tree Mapper"
+				dlg.setWindowTitle("Torchbearer Tree Mapper")
 				dlg.setModal(True)
-				dlg.minimumWidth = 400
+				dlg.setMinimumWidth(400)
 				dlg.open()
 				dlg.show()
 				for d in subitem.fldr:
 					genlist_d[d.index] = self.pti_factory(d, item if d.index == 0 and d.parent_idx <= 0 else genlist_d[d.parent_idx])
-				dlg.value += 100
+				dlg.setValue(dlg.value() + 100)
 				genlist_f = {f.index: self.pti_factory(f, genlist_d[f.parent_idx]) for f in subitem.file}
-				dlg.value += 100
+				dlg.setValue(dlg.value() + 100)
 				for it in [*genlist_d.values(), *genlist_f.values()]:
 					it.setExpanded(True)
 				item.setExpanded(True)
 				logger.info(f'Finished tree generation for {subitem.admin.name}, generated {len(genlist_d)} folders and {len(genlist_f)} files')
-				if dlg.wasCanceled:
+				if dlg.wasCanceled():
 					logger.info('Treegen - I got cancelled! Clearing...')
 					for i in genlist_d.values():
 						item.removeChild(i)
@@ -408,13 +405,13 @@ class MainTree(QtWidgets.QWidget):
 			self.desc_hex.bytedata = b''
 		
 		if isinstance(subitem, Dictable):
-			self.desc_oth.plainText = yamldump(subitem.dict())
+			self.desc_oth.plainText = yamldump(subitem.dicto())
 		else:
 			self.desc_oth.plainText = ''
 	
 	@QtCore.Slot()
 	def load_instances(self):
-		for i, item in enumerate([self.tree_pti.topLevelItem(x) for x in range(self.tree_pti.topLevelItemCount)]):
+		for i, item in enumerate([self.tree_pti.topLevelItem(x) for x in range(self.tree_pti.topLevelItemCount())]):
 			for x in list(self.tree_pti.nested_children(item)):
 				x.parent().removeChild(x)
 		self.tree_pti.clear()
@@ -440,8 +437,8 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.vrsn = vrsn
 		super().__init__()
 		self.cfg = AppConfig()
-		self.windowTitle = f"Torchbearer | v{self.vrsn}"
-		self.statusBar = QtWidgets.QStatusBar()
+		self.setWindowTitle(f"Torchbearer | v{self.vrsn}")
+		self.setStatusBar(QtWidgets.QStatusBar())
 		self.resize(1366, 768)
 
 		self.tree = MainTree(self.cfg)
@@ -468,7 +465,7 @@ class MainWindow(QtWidgets.QMainWindow):
 	def about(self):
 		md_txt = QtWidgets.QTextEdit(markdown=Path('./readme.md').read_text(), readOnly=True)
 		md_txt.setFrameStyle(QtWidgets.QFrame.Shape.NoFrame)
-		md_txt.windowTitle = f"About Torchbearer v{self.vrsn}"
+		md_txt.setWindowTitle(f"About Torchbearer v{self.vrsn}")
 		md_txt.resize(600, 400)
 		md_txt.show()
 
@@ -481,11 +478,3 @@ class MainWindow(QtWidgets.QMainWindow):
 # Want no borders? Use this where self is a QtWidgets.QMainWindow instance:
 # self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.WindowStaysOnTopHint)
 # Further reading: https://doc.qt.io/qtforpython-6/PySide6/QtCore/Qt.html#PySide6.QtCore.Qt.WindowType
-
-def mainApp(vrsn):
-	with TimerLog('Program init'):
-		app = QtWidgets.QApplication(sys.argv)
-		app.windowIcon = QtGui.QIcon('./torchbearer/style/tbr.svg')
-		window = MainWindow(vrsn)
-		window.show()
-	return app

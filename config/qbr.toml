@@ -1,4 +1,4 @@
-name = "Quantum Break"
 key = "QBR"
-version = "latest"
+name = "Quantum Break"
 path = "C:/Program Files (x86)/Steam/steamapps/common/QuantumBreak"
+version = "latest"

@@ -4,7 +4,6 @@ from pathlib import Path
 
 from loguru import logger
 from PySide6 import QtCore, QtWidgets, QtGui
-from __feature__ import true_property #type: ignore
 
 from mulch import PassingException, qBox, qGrid, qTabs, PathLineEdit, Quick
 from torchbearer.northlight_engine.configs import AppConfig, InstanceConfig
@@ -13,17 +12,15 @@ from torchbearer.northlight_engine.configs import AppConfig, InstanceConfig
 class AspectRatioLabel(QtWidgets.QLabel):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self._pixmap = self.pixmap
+		self._pixmap = self.pixmap()
 	
 	def resizeEvent(self, event):
 		self.setPixmap(self._pixmap)
 		super().resizeEvent(event)
 	
-	def setPixmap(self, new_pixmap: QtGui.QPixmap):
-		if not new_pixmap:
-			return
+	def setScaledPixmap(self, new_pixmap: QtGui.QPixmap):
 		self._pixmap = new_pixmap
-		self.pixmap = self._pixmap.scaled(self.frameSize, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+		self.setPixmap(self._pixmap.scaled(self.frameSize(), aspectMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio))
 
 
 # some todos:
@@ -64,7 +61,7 @@ class ConfigWindow(QtWidgets.QDialog):
 	def __init__(self, cfg: AppConfig):
 		self.cfg = cfg
 		super().__init__(sizeGripEnabled=False)
-		self.windowTitle = f"Preferences"
+		self.setWindowTitle("Preferences")
 		
 		self.field_cach = PathLineEdit(self.cfg.cach, select=True, empty=True)
 		self.field_expo = PathLineEdit(self.cfg.expo, select=True, empty=True)
@@ -73,7 +70,7 @@ class ConfigWindow(QtWidgets.QDialog):
 		reloadCSS((Path.cwd() / 'style.qss'), True)
 
 		self.listo = QtWidgets.QListWidget()
-		self.listo.selectionMode = QtWidgets.QListWidget.SelectionMode.SingleSelection
+		self.listo.setSelectionMode(QtWidgets.QListWidget.SelectionMode.SingleSelection)
 		self.field_name = QtWidgets.QLineEdit('')
 		self.field_vrsn = QtWidgets.QLineEdit('')
 		self.field_path = PathLineEdit(Path(), select=True)
@@ -128,8 +125,8 @@ class ConfigWindow(QtWidgets.QDialog):
 	@QtCore.Slot()
 	def updateInstance(self):
 		instance = self.instance()
-		instance.name = self.field_name.text
-		instance.version = self.field_vrsn.text
+		instance.name = self.field_name.displayText()
+		instance.version = self.field_vrsn.displayText()
 		instance.path = self.field_path.path
 		self.cfgChanged.emit()
 	
@@ -141,14 +138,22 @@ class ConfigWindow(QtWidgets.QDialog):
 	@QtCore.Slot()
 	def update_txts(self):
 		instance = self.instance()
-		self.field_name.text = instance.name
-		self.field_vrsn.text = instance.version
+
+		self.field_path.pathChanged.disconnect(self.updateInstance)
+		self.field_name.editingFinished.disconnect(self.updateInstance)
+		self.field_vrsn.editingFinished.disconnect(self.updateInstance)
+		self.field_name.setText(instance.name)
+		self.field_vrsn.setText(instance.version)
 		self.field_path.path = instance.path
 		icopath = Path(f"./torchbearer/style/{instance.key.lower()}.svg").resolve()
 		if icopath.is_file():
-			self.field_icon.pixmap = QtGui.QPixmap(str(icopath))
+			self.field_icon.setScaledPixmap(QtGui.QPixmap(str(icopath)))
 		else:
-			self.field_icon.pixmap = QtGui.QPixmap()
+			self.field_icon.setScaledPixmap(QtGui.QPixmap())
+		
+		self.field_path.pathChanged.connect(self.updateInstance)
+		self.field_name.editingFinished.connect(self.updateInstance)
+		self.field_vrsn.editingFinished.connect(self.updateInstance)
 	
 	def regen_configs(self):
 		dir_steam = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Steam /steamapps/common directory", options=QtWidgets.QFileDialog.Option.ShowDirsOnly)
@@ -156,7 +161,7 @@ class ConfigWindow(QtWidgets.QDialog):
 		self.cfg.regen_configs(dir_steam, dir_epic)
 		
 	def dicto(self) -> dict[str, QtWidgets.QListWidgetItem]:
-		return {z.text(): z for z in [self.listo.item(x) for x in range(self.listo.count)]}
+		return {z.text(): z for z in [self.listo.item(x) for x in range(self.listo.count())]}
 	
 	def instance(self) -> InstanceConfig | None:
 		selected = self.listo.selectedItems()

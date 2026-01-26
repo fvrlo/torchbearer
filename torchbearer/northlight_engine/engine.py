@@ -79,7 +79,7 @@ class GenericVFS(ABC):
 		else:
 			return '/'.join([self.parent.path_raw(), self.name])
 	
-	def dict(self) -> dict[str, int | str]:
+	def dicto(self) -> dict[str, int | str]:
 		return dict(
 			index=self.index,
 			parent_idx=self.parent_idx,
@@ -107,9 +107,9 @@ class Folder(GenericVFS):
 	def size(self) -> int:
 		return len(self.children_d_ids) + len(self.children_f_ids)
 	
-	def dict(self) -> dict[str, Any]:
+	def dicto(self) -> dict[str, Any]:
 		return dict(
-			vfs=super(Folder, self).dict(),
+			vfs=super(Folder, self).dicto(),
 			children=self.size,
 			children_folders=len(self.children_d_ids),
 			children_files=len(self.children_f_ids),
@@ -167,9 +167,9 @@ class File(GenericVFS):
 		else:
 			return self.chunks[0].read()
 	
-	def dict(self):
+	def dicto(self):
 		return dict(
-			vfs=super(File, self).dict(),
+			vfs=super(File, self).dicto(),
 			extension=self.extension,
 			chunks_ids=self.chunks_ids,
 			out_size=self.out_size,
@@ -254,12 +254,12 @@ class Admin[T_Reader: Reader]:
 		self._data = None
 		self._meta = None
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			"File"   : self.path,
 			"Version": self.reader().version,
-			"Tree"   : self.tree.dict(),
-			"Data"   : self.data.dict(),
+			"Tree"   : self.tree.dicto(),
+			"Data"   : self.data.dicto(),
 		}
 	
 	def size(self):
@@ -275,7 +275,7 @@ class TreeAdmin:
 	file: Mapper[File]
 	prefix: str
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			"Prefix" : self.prefix,
 			"Folders": len(self.fldr.list),
@@ -300,7 +300,7 @@ class TreeAdmin:
 							first_child_f_id=x.first_child_f_id,
 							children_d_ids=rdr.relmap_d.get(i, list()),
 							children_f_ids=rdr.relmap_f.get(i, list()),
-						) for i, x in enumerate(rdr.main_d)}
+						) for i, x in rdr.main_d.items()}
 				elif isinstance(rdr, ReaderNLEv20):
 					m_d = {i: Folder(
 							admin=admin, index=i, parent_idx=x.parent_idx, next_id=x.next_id, name=fldr_names[i],
@@ -311,7 +311,7 @@ class TreeAdmin:
 							first_child_f_id=(rdr.relmap_f[i][0] if len(rdr.relmap_f[i]) > 0 else -1) if i in rdr.relmap_f.keys() else -1,
 							children_d_ids=rdr.relmap_d.get(i, list()),
 							children_f_ids=rdr.relmap_f.get(i, list()),
-						) for i, x in enumerate(rdr.main_d)}
+						) for i, x in rdr.main_d.items()}
 				else:
 					raise ValueError(type(rdr))
 			with TimerLog(f'TreeAdmin[{rdr.logname}] - file mapping (<le>{len(rdr.main_f)}</le> files)'):
@@ -324,7 +324,7 @@ class TreeAdmin:
 							metadata_size=0,
 							chunks_ids=[i],
 							datahash=x.data_crc
-						) for i, x in enumerate(rdr.main_f)}
+						) for i, x in rdr.main_f.items()}
 				elif isinstance(rdr, ReaderNLEv20):
 					m_f = {i: File(
 							admin=admin, index=i, parent_idx=x.parent_idx, name=file_names[i],
@@ -334,7 +334,7 @@ class TreeAdmin:
 							metadata_size=x.metadata.size,
 							chunks_ids=list(zz // 16 for zz in range(x.chunks.ofst, x.chunks.ofst + x.chunks.size, 16)),
 							datahash=None,
-						) for i, x in enumerate(rdr.main_f)}
+						) for i, x in rdr.main_f.items()}
 				else:
 					raise ValueError(type(rdr))
 		self.fldr = Mapper(admin=admin, mapping=m_d)
@@ -360,7 +360,7 @@ class DataAdmin:
 						offset=x.offset,
 						size_decompressed=x.size,
 						size_compressed=0
-					) for i, x in enumerate(rdr.main_f)
+					) for i, x in rdr.main_f.items()
 				}
 			)
 			self.arch = Mapper(admin=admin, mapping={0: Archive(admin=admin, index=0, path=rdr.path)})
@@ -376,15 +376,15 @@ class DataAdmin:
 						offset=x.offset,
 						size_decompressed=x.decompressed,
 				        size_compressed=x.compressed
-					) for i, x in enumerate(rdr.cache_chnk)
+					) for i, x in rdr.cache_chnk.items()
 				}
 			)
 			pathdict_arch = rdr.build_strdict_option('arch')
-			self.arch = Mapper(admin=admin, mapping={i: Archive(admin=admin, index=i, path=rdr.path.parent / pathdict_arch[i], hash=x.hash) for i, x in enumerate(rdr.cache_arch)})
+			self.arch = Mapper(admin=admin, mapping={i: Archive(admin=admin, index=i, path=rdr.path.parent / pathdict_arch[i], hash=x.hash) for i, x in rdr.cache_arch.items()})
 		else:
 			raise ValueError(type(rdr))
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			"Chunks"  : len(self.chnk.list),
 			"Archives": len(self.arch.list)
@@ -396,7 +396,7 @@ class MetaAdmin:
 	path: Path | None = field(default=None)
 	metadata_types: dict[int, str] = field(default_factory=dict)
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			"Path"          : str(self.path),
 			"Metadata Types": self.metadata_types
@@ -434,7 +434,7 @@ class Archive:
 			if chunk.archive_idx == self.index:
 				yield chunk
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			'path': self.path,
 			'hash': self.hash
@@ -474,7 +474,7 @@ class Chunk:
 				case False:
 					return f.read(self.size)
 	
-	def dict(self):
+	def dicto(self):
 		return {
 			'compressed': self.compressed,
 			'archive_idx': self.archive_idx,
