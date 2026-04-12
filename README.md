@@ -7,6 +7,9 @@
 Torchbearer is an attempt at a general Northlight Engine data interpreter (and maybe someday writer), built on the backbone of [OpenAWE-Project/OpenAWE](https://github.com/OpenAWE-Project/OpenAWE) and made using some rough Python and Qt.
 
 
+quick note: this isn't abandoned! I'm just preoccupied with life, so there's plenty I want to do still when I get the chance.
+
+
 This goes without saying, but this is Remedy data from Remedy games in Remedy formats.
 Copyrighted data belongs to the respective owners.
 This is for research and exploration, not copyright infringement or [AI trash](https://www.wheresyoured.at/the-haters-gui/). <Please tinker/use responsibly.> 
